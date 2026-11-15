@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Email terverifikasi · Ninokuu</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B1018">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<link rel="icon" href="../favicon.png">
+<style>
+  :root { --bg: #0B1018; --s1: #141B27; --line: #273244; --tx: #F2F4F8; --mu: #A3ACBD; --red: #E0242B; --ok: #5DD39E; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--tx);
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 32px 20px calc(32px + env(safe-area-inset-bottom));
+    background: radial-gradient(90% 55% at 50% 0%, rgba(93, 211, 158, .14), transparent 70%), var(--bg); }
+  body.err { background: radial-gradient(90% 55% at 50% 0%, rgba(224, 36, 43, .18), transparent 70%), var(--bg); }
+  main { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .icon-wrap { position: relative; }
+  .icon { width: 96px; height: 96px; border-radius: 24px; box-shadow: 0 18px 44px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .06); }
+  .badge { position: absolute; right: -10px; bottom: -10px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ok); color: #0B1018; border: 4px solid var(--bg); }
+  body.err .badge { background: var(--red); color: #fff; }
+  h1 { margin: 26px 0 8px; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+  p { margin: 0; color: var(--mu); font-size: 14.5px; line-height: 1.6; }
+  .btn { margin-top: 28px; width: 100%; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    border-radius: 18px; background: var(--red); color: #fff; font-size: 16px; font-weight: 800; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(224, 36, 43, .35); -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(.98); }
+  .link { margin-top: 14px; color: var(--mu); font-size: 13.5px; font-weight: 600; text-decoration: none; padding: 8px; }
+  .hint { margin-top: 18px; padding: 12px 14px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line); font-size: 12.5px; color: var(--mu); line-height: 1.55; }
+  .hint a { color: var(--tx); font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="icon-wrap">
+    <img class="icon" src="../icon.png" alt="Ninokuu" width="96" height="96">
+    <span class="badge" id="badge" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-10"/></svg>
+    </span>
+  </div>
+  <h1 id="ttl">Email berhasil diverifikasi</h1>
+  <p id="msg">Akun Ninokuu-mu sudah aktif. Kembali ke aplikasi lalu masuk dengan email dan kata sandimu.</p>
+  <a class="btn" id="open" href="ninokuu://verified">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+    <span>Kembali ke aplikasi</span>
+  </a>
+  <a class="link" id="web" href="https://rexxaply.github.io/NinoKuu-Manga/#/more">Lanjut di versi web</a>
+  <div class="hint" id="hint" hidden>Aplikasi tidak terbuka? Pastikan Ninokuu versi terbaru sudah terpasang, atau <a href="../">unduh aplikasinya di sini</a>.</div>
+</main>
+<script>
+  // Supabase menaruh hasil verifikasi di alamat (#access_token=… atau #error=…). Token tidak dipakai di halaman ini
+  // dan langsung dihapus dari alamat supaya tidak tersimpan di riwayat browser.
+  const q = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
+  if (location.hash || location.search) history.replaceState(null, "", location.pathname);
+  const err = q.get("error_description") || q.get("error");
+  if (err) {
+    document.body.classList.add("err");
+    document.getElementById("badge").innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+    const expired = /expired|invalid|otp/i.test(err + " " + (q.get("error_code") || ""));
+    document.getElementById("ttl").textContent = expired ? "Tautan sudah tidak berlaku" : "Verifikasi gagal";
+    document.getElementById("msg").textContent = expired
+      ? "Tautan verifikasi ini sudah kedaluwarsa atau sudah pernah dipakai. Bila akunmu belum aktif, daftar ulang dari aplikasi untuk menerima email baru."
+      : "Terjadi masalah saat memverifikasi email: " + err.replace(/\+/g, " ");
+  }
+  // bila aplikasi tidak terbuka dalam 1,5 detik setelah tombol diketuk, tampilkan petunjuk
+  document.getElementById("open").addEventListener("click", () => {
+    const t = setTimeout(() => { document.getElementById("hint").hidden = false; }, 1500);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(t); }, { once: true });
+  });
+</script>
+</body>
+</html>
