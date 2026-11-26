@@ -1,0 +1,219 @@
+// NinoNime · modul anime/player (dipecah dari anime.js)
+import { esc, icon, $ } from "./ui.js";
+import { episodeSource } from "./sources.js";
+import { aHref, acv, hist, saveHist } from "./lib.js";
+
+// layar penuh status bar (APK/Capacitor) bisa disambungkan di sini; di PWA cukup Fullscreen API
+const setFullscreen = async () => {};
+
+/* =====================================================================
+   Pemutar + mini player
+   - Geser video ke bawah → mengecil menjadi jendela melayang di atas bar bawah (video tetap berjalan).
+   - Ketuk / geser ke atas jendela melayang → kembali penuh. Geser ke samping / ✕ → tutup.
+   Sumber video: trailer YouTube resmi (dari data MyAnimeList) dan episodeSource() di js/sources.js
+   (MP4/HLS langsung atau video YouTube).
+   ===================================================================== */
+// Sumber video episode: lihat js/sources.js
+
+export const player = (() => {
+  let root = null, st = "closed", cur = null, ep = 0, list = [], yt = null, ytState = -1, vid = null;
+  const build = () => {
+    root = document.createElement("div");
+    root.className = "ap"; root.hidden = true;
+    root.innerHTML = `<div class="ap-dim"></div>
+<div class="ap-sheet" role="dialog" aria-label="Pemutar anime">
+  <div class="ap-vid"><div class="ap-media"></div>
+    <div class="ap-ctl"><button class="ap-ib" data-p="min" aria-label="Kecilkan">${icon("minim", 24, 2.2)}</button><span class="grow"></span><button class="ap-ib" data-p="fs" aria-label="Layar penuh">${icon("fs", 20, 2)}</button></div>
+    <span class="ap-mt"><b></b><span></span></span>
+    <button class="ap-mb" data-p="pp" aria-label="Putar / jeda">${icon("pause", 22, 2.2)}</button>
+    <button class="ap-mb" data-p="close" aria-label="Tutup">${icon("x", 22, 2.2)}</button>
+    <span class="ap-bar"><i></i></span></div>
+  <div class="ap-body"><span class="ap-grab" aria-hidden="true"></span><div class="ap-info"></div></div>
+</div>`;
+    document.body.append(root);
+    root.addEventListener("click", onClick);
+    bindDrag();
+    window.addEventListener("message", onYtMsg);
+  };
+  const setState = (s) => { st = s; root.classList.toggle("full", s === "full"); root.classList.toggle("mini", s === "mini"); document.body.classList.toggle("ap-mini", s === "mini"); document.body.classList.toggle("ap-full", s === "full"); };
+
+  /* ----- media ----- */
+  const media = () => $(".ap-media", root);
+  function load(src, poster) {
+    stopMedia();
+    const m = media();
+    if (!src) {
+      m.innerHTML = `<div class="ap-empty" style="--bg:url('${esc(poster || "")}')"><span>${icon("tv", 30, 1.8)}</span><b>Video episode ${ep} belum tersedia</b><i>Sumber video untuk episode ini belum ada (js/sources.js).${cur?.trailer ? " Trailer bisa diputar." : ""}</i>${cur?.trailer ? `<button class="btn ghost" data-p="trailer">${icon("play", 16, 2)}Putar trailer</button>` : ""}</div>`;
+      syncPP(); return;
+    }
+    if (src.kind === "yt") {
+      const o = encodeURIComponent(location.origin.startsWith("http") ? location.origin : "https://localhost");
+      m.innerHTML = `<iframe class="ap-yt" src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(src.id)}?enablejsapi=1&autoplay=1&playsinline=1&rel=0&modestbranding=1&origin=${o}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" title="Pemutar video"></iframe>`;
+      yt = $("iframe", m); ytState = -1;
+      yt.addEventListener("load", () => { try { yt.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*"); } catch {} });
+    } else {
+      m.innerHTML = `<video class="ap-v" playsinline autoplay controls preload="metadata" ${poster ? `poster="${esc(poster)}"` : ""}></video>`;
+      vid = $("video", m); vid.src = src.url;
+      const h = hist().find((y) => y.id === cur.id && Number(y.ep) === ep);
+      vid.addEventListener("loadedmetadata", () => { if (h?.t > 5 && h.t < vid.duration - 10) vid.currentTime = h.t; }, { once: true });
+      let lastSave = 0;
+      vid.addEventListener("timeupdate", () => { const b = $(".ap-bar i", root); if (b && vid.duration) b.style.width = (vid.currentTime / vid.duration) * 100 + "%"; if (Date.now() - lastSave > 5000) { lastSave = Date.now(); saveHist(cur, ep, vid.currentTime, vid.duration); } });
+      vid.addEventListener("play", syncPP); vid.addEventListener("pause", syncPP);
+      vid.addEventListener("ended", () => { if (ep && (!cur.eps || ep < cur.eps)) setTimeout(() => go(ep + 1), 800); });
+    }
+    syncPP();
+  }
+  function stopMedia() { if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
+  const ytCmd = (func) => { try { yt?.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*"); } catch {} };
+  function onYtMsg(e) {
+    if (!yt || e.source !== yt.contentWindow) return;
+    let d; try { d = typeof e.data === "string" ? JSON.parse(e.data) : e.data; } catch { return; }
+    const s = d?.info?.playerState ?? (d?.event === "onStateChange" ? d.info : undefined);
+    if (typeof s === "number") { ytState = s; syncPP(); }
+    const ct = d?.info?.currentTime, du = d?.info?.duration;
+    if (ct != null && du) { const b = $(".ap-bar i", root); if (b) b.style.width = (ct / du) * 100 + "%"; }
+  }
+  const playing = () => (vid ? !vid.paused : yt ? ytState === 1 || ytState === 3 || ytState === -1 : false);
+  const syncPP = () => { const b = $("[data-p=pp]", root); if (b) { b.innerHTML = icon(playing() ? "pause" : "play", 22, 2.2); b.hidden = !vid && !yt; } };
+  const toggle = () => { if (vid) vid.paused ? vid.play() : vid.pause(); else if (yt) { ytCmd(playing() ? "pauseVideo" : "playVideo"); ytState = playing() ? 2 : 1; syncPP(); } };
+
+  /* ----- isi info di bawah video ----- */
+  function info() {
+    const a = cur, n = Math.max(a.eps || 0, list.length, ep);
+    const e = list.find((y) => y.n === ep);
+    $(".ap-mt b", root).textContent = a.title;
+    $(".ap-mt span", root).textContent = ep ? `Episode ${ep}` : "Trailer";
+    $(".ap-info", root).innerHTML = `
+  <div class="ap-h">${acv(a.cover, a.title, "sm")}<div class="col g4 grow"><b class="ap-t">${esc(a.title)}</b><span class="mu sm">${ep ? `Episode ${ep}${e?.title && !/^episode\s*\d+$/i.test(e.title) ? " · " + esc(e.title) : ""}` : "Trailer resmi"}</span></div></div>
+  <div class="ap-acts">
+    <button class="pill-btn" data-p="prev" ${ep > 1 ? "" : "disabled"}>${icon("back", 16, 2)}Sebelumnya</button>
+    <button class="pill-btn" data-p="next" ${ep && (!a.eps || ep < a.eps) && (!n || ep < n) ? "" : "disabled"}>Berikutnya${icon("next", 16, 2)}</button>
+    ${a.trailer ? `<button class="pill-btn" data-p="trailer">${icon("tv", 16, 2)}Trailer</button>` : ""}
+    <button class="pill-btn" data-p="info">${icon("info", 16, 2)}Info</button></div>
+  ${a.synopsis ? `<p class="ap-syn">${esc(a.synopsis.slice(0, 360))}${a.synopsis.length > 360 ? "…" : ""}</p>` : ""}
+  ${n ? `<div class="sec-h"><h2>Daftar episode</h2><span class="mu sm">${n} episode</span></div><div class="ep-grid">${Array.from({ length: n }, (_, i) => `<button class="ep-b${i + 1 === ep ? " on" : ""}" data-p="ep" data-v="${i + 1}">${i + 1}</button>`).join("")}</div>` : ""}
+  <div style="height:calc(40px + env(safe-area-inset-bottom))"></div>`;
+    requestAnimationFrame(() => $(".ap-info .ep-b.on", root)?.scrollIntoView({ block: "nearest", inline: "center" }));
+  }
+  async function go(n) {
+    ep = n; info();
+    if (!n) { load(cur.trailer ? { kind: "yt", id: cur.trailer } : null, cur.cover); return; }
+    saveHist(cur, n);
+    load(null, cur.cover); $(".ap-empty b", root) && ($(".ap-empty b", root).textContent = "Memuat video…");
+    let src = null; try { src = await episodeSource(cur, n); } catch {}
+    if (cur && ep === n) load(src, cur.cover);
+  }
+
+  /* ----- buka / kecilkan / tutup (animasi FLIP: video berpindah halus antara penuh ↔ melayang) ----- */
+  const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function flip(to) {
+    const v = media(), sh = $(".ap-sheet", root);
+    const a = v.getBoundingClientRect();
+    sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
+    setState(to);
+    if (reduce()) return;
+    const b = v.getBoundingClientRect();
+    const sx = a.width / b.width, sy = a.height / b.height;
+    v.animate([{ transformOrigin: "0 0", transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${sx}, ${sy})` }, { transformOrigin: "0 0", transform: "none" }], { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" });
+    if (to === "full") { $(".ap-body", root).animate([{ opacity: 0, transform: "translateY(40px)" }, { opacity: 1, transform: "none" }], { duration: 300, easing: "ease-out" }); $(".ap-dim", root).animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); }
+    else $(".ap-mt", root).animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 120, fill: "backwards" });
+  }
+  function open(a, n = 1, eps = []) {
+    if (!root) build();
+    const same = cur && cur.id === a.id && ep === n && st !== "closed";
+    cur = a; list = eps || [];
+    if (st === "closed") { root.hidden = false; setState("full"); if (!reduce()) $(".ap-sheet", root).animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" }); }
+    else if (st === "mini") flip("full");
+    if (!same) go(n);
+  }
+  function minimize() { if (st === "full") { exitFs(); flip("mini"); } }
+  function close() {
+    if (st === "closed") return;
+    exitFs();
+    const sh = $(".ap-sheet", root);
+    const end = () => { stopMedia(); root.hidden = true; setState("closed"); sh.style.transform = ""; sh.style.opacity = ""; };
+    if (reduce()) return end();
+    sh.animate([{ transform: sh.style.transform || "none", opacity: 1 }, { transform: (sh.style.transform || "") + (st === "mini" ? " translateY(120%)" : " translateY(100%)"), opacity: st === "mini" ? 0 : 1 }], { duration: 240, easing: "ease-in" }).onfinish = end;
+  }
+  // tombol kembali HP (dipanggil dari main.js): pemutar penuh → kecilkan dulu, tidak meninggalkan halaman
+  const onBack = () => { if (fs) { exitFs(); return true; } if (st === "full") { minimize(); return true; } return false; };
+
+  /* ----- layar penuh (miring) ----- */
+  let fs = false;
+  async function enterFs() {
+    const v = $(".ap-vid", root); fs = true; document.body.classList.add("ap-fs"); root.classList.add("fs");
+    try { await (v.requestFullscreen?.() || v.webkitRequestFullscreen?.()); } catch {}
+    try { await screen.orientation?.lock?.("landscape"); } catch {}
+    setFullscreen(true).catch?.(() => {});
+  }
+  function exitFs() {
+    if (!fs) return; fs = false; document.body.classList.remove("ap-fs"); root?.classList.remove("fs");
+    try { if (document.fullscreenElement) document.exitFullscreen(); } catch {}
+    try { screen.orientation?.unlock?.(); } catch {}
+    setFullscreen(false, false)?.catch?.(() => {});
+  }
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fs) exitFs(); });
+
+  function onClick(e) {
+    const b = e.target.closest("[data-p]");
+    if (st === "mini" && !b) { flip("full"); return; }
+    if (!b) return;
+    const p = b.dataset.p;
+    if (p === "min") minimize();
+    else if (p === "close") close();
+    else if (p === "pp") toggle();
+    else if (p === "fs") fs ? exitFs() : enterFs();
+    else if (p === "prev" && ep > 1) go(ep - 1);
+    else if (p === "next") go(ep + 1);
+    else if (p === "ep") go(Number(b.dataset.v));
+    else if (p === "trailer") go(0);
+    else if (p === "info") { minimize(); location.hash = aHref(cur.id); }
+  }
+
+  /* ----- geser: penuh → bawah (kecilkan), melayang → atas (buka) / samping (tutup) ----- */
+  function bindDrag() {
+    const sh = $(".ap-sheet", root), body = $(".ap-body", root);
+    let y0 = 0, x0 = 0, dy = 0, dx = 0, t0 = 0, on = false, axis = "";
+    const H = () => window.innerHeight;
+    sh.addEventListener("touchstart", (e) => {
+      if (fs || e.touches.length > 1) return;
+      const inBody = body.contains(e.target);
+      if (st === "full" && inBody && body.scrollTop > 0) return;
+      if (e.target.closest("iframe, video")) return;
+      y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = dx = 0; t0 = Date.now(); on = true; axis = "";
+    }, { passive: true });
+    sh.addEventListener("touchmove", (e) => {
+      if (!on) return;
+      dy = e.touches[0].clientY - y0; dx = e.touches[0].clientX - x0;
+      if (!axis) { if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return; axis = Math.abs(dy) >= Math.abs(dx) ? "y" : "x"; }
+      if (st === "full") {
+        if (axis !== "y" || dy < 0) { if (dy < 0) on = false; return; }
+        if (e.cancelable) e.preventDefault();
+        const p = Math.min(1, dy / (H() * 0.55));
+        sh.style.transition = "none"; sh.style.transform = `translateY(${dy}px)`;
+        root.style.setProperty("--p", p.toFixed(3));
+      } else if (st === "mini") {
+        if (e.cancelable) e.preventDefault();
+        sh.style.transition = "none";
+        if (axis === "x") { sh.style.transform = `translateX(${dx}px)`; sh.style.opacity = String(Math.max(0.2, 1 - Math.abs(dx) / 260)); }
+        else if (dy < 0) sh.style.transform = `translateY(${Math.max(dy, -140) * 0.6}px)`;
+      }
+    }, { passive: false });
+    const end = () => {
+      if (!on) return; on = false;
+      const v = (Date.now() - t0) || 1, vel = dy / v;
+      sh.style.transition = "";
+      if (st === "full") {
+        if (axis === "y" && (dy > 110 || (vel > 0.6 && dy > 30))) minimize();
+        else { sh.animate([{ transform: sh.style.transform }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" }); sh.style.transform = ""; root.style.removeProperty("--p"); }
+      } else if (st === "mini") {
+        if (axis === "x" && Math.abs(dx) > 90) { sh.style.opacity = ""; close(); return; }
+        if (axis === "y" && dy < -40) { sh.style.transform = ""; flip("full"); return; }
+        sh.animate([{ transform: sh.style.transform, opacity: sh.style.opacity || 1 }, { transform: "none", opacity: 1 }], { duration: 200, easing: "ease-out" });
+        sh.style.transform = ""; sh.style.opacity = "";
+      }
+    };
+    sh.addEventListener("touchend", end); sh.addEventListener("touchcancel", end);
+  }
+  return { open, close, minimize, onBack, state: () => st };
+})();

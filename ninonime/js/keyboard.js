@@ -1,0 +1,79 @@
+/* Keyboard layar — logika yang sama dengan Ninokuu (js/main.js "setKeyboard/applyKb").
+   - APK: tinggi keyboard dari plugin Capacitor Keyboard (will/did show/hide).
+   - Browser/PWA (tanpa plugin): keyboard disimpulkan dari visualViewport saat kolom isian fokus.
+   --kb = bagian keyboard yang MENUTUPI layar (0 bila layar sudah menyusut karena adjustResize).
+   body.kb-open = keyboard terbuka: menu bawah disembunyikan, halaman login dirapatkan. */
+let kbBase = innerHeight, kbOpen = false, kbH = 0;
+const root = document.documentElement;
+const plugin = () => { try { const C = window.Capacitor; return C?.isNativePlatform?.() ? C.Plugins?.Keyboard || null : null; } catch { return null; } };
+const kbCss = (h) => { const dpr = devicePixelRatio || 1; return h > kbBase * 0.62 && dpr > 1.2 ? h / dpr : h; };   // sebagian HP melapor piksel fisik
+const typingEl = () => { const a = document.activeElement; return a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !/^(checkbox|radio|button|submit|range|file)$/.test(a.type))) ? a : null; };
+
+const applyKb = () => {
+  const shrink = Math.max(0, kbBase - innerHeight), vv = window.visualViewport;
+  const vvKnows = vv && innerHeight - vv.height > 40;
+  const vvCover = vv ? Math.max(0, innerHeight - (vv.height + vv.offsetTop)) : 0;
+  const lift = vvKnows ? vvCover : shrink > 80 ? 0 : kbCss(kbH) - shrink;
+  root.style.setProperty("--kb", (lift > 40 ? Math.round(Math.min(lift, innerHeight * 0.7)) : 0) + "px");
+};
+
+// kolom yang diketik digulir ke area yang kelihatan (tidak tertutup keyboard)
+const reveal = () => {
+  const a = typingEl(); if (!a) return;
+  const vv = window.visualViewport, vis = (vv ? vv.height : innerHeight) - parseFloat(getComputedStyle(root).getPropertyValue("--kb") || 0);
+  const r = (a.closest("label") || a).getBoundingClientRect(), b = a.getBoundingClientRect();
+  const bottom = Math.max(r.bottom, b.bottom), top = Math.min(r.top, b.top);
+  if (bottom > vis - 16) scrollBy({ top: bottom - vis + 24, behavior: "smooth" }); else if (top < 12) scrollBy({ top: top - 12, behavior: "smooth" });
+};
+
+function setKeyboard(h, phase) {
+  if (h > 0) {
+    kbOpen = true;
+    if (phase !== "did") return;
+    kbH = h; applyKb();
+    document.body.classList.add("kb-open");
+    setTimeout(reveal, 60);
+  } else {
+    kbOpen = false; kbH = 0;
+    if (phase === "did") setTimeout(() => { if (!kbOpen) kbBase = innerHeight; }, 250);
+    root.style.setProperty("--kb", "0px");
+    document.body.classList.remove("kb-open");
+  }
+  dispatchEvent(new CustomEvent("nn:kb", { detail: { open: h > 0, phase } }));
+}
+
+// layar menyusut/membesar saat keyboard: kartu & isi meluncur halus dari posisi lama (bukan melompat)
+let flipH = innerHeight;
+addEventListener("resize", () => {
+  if (kbOpen) { if (kbH) { applyKb(); setTimeout(reveal, 80); } } else if (innerHeight > kbBase) kbBase = innerHeight;
+  const d = innerHeight - flipH; flipH = innerHeight;
+  const pg = document.querySelector(".auth-page");
+  if (Math.abs(d) < 80 || !pg || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  pg.animate([{ transform: `translate3d(0, ${-d / 3}px, 0)` }, { transform: "translate3d(0, 0, 0)" }], { duration: 280, easing: "cubic-bezier(.2, .8, .2, 1)" });
+});
+window.visualViewport?.addEventListener("resize", () => { if (kbOpen) applyKb(); });
+window.visualViewport?.addEventListener("scroll", () => { if (kbOpen) applyKb(); });
+addEventListener("orientationchange", () => setTimeout(() => { if (!kbOpen) kbBase = innerHeight; }, 400));
+
+export function initKeyboard() {
+  const K = plugin();
+  if (K) {
+    K.addListener("keyboardWillShow", (i) => setKeyboard(Number(i?.keyboardHeight) || 0, "will"));
+    K.addListener("keyboardDidShow", (i) => setKeyboard(Number(i?.keyboardHeight) || 0, "did"));
+    K.addListener("keyboardWillHide", () => setKeyboard(0, "will"));
+    K.addListener("keyboardDidHide", () => setKeyboard(0, "did"));
+    return;
+  }
+  // tanpa plugin (browser/PWA): simpulkan dari visualViewport + fokus kolom isian
+  let t = 0;
+  const infer = () => {
+    clearTimeout(t); t = setTimeout(() => {
+      const vv = window.visualViewport, typing = !!typingEl();
+      if (!typing && !kbOpen) kbBase = Math.max(innerHeight, vv ? vv.height + vv.offsetTop : 0);
+      const h = typing ? Math.round(kbBase - (vv ? vv.height + vv.offsetTop : innerHeight)) : 0;
+      if (h > 80) { if (!kbOpen || kbH !== h) { setKeyboard(h, "will"); setKeyboard(h, "did"); } } else if (kbOpen) { setKeyboard(0, "will"); setKeyboard(0, "did"); }
+    }, 50);
+  };
+  addEventListener("focusin", infer); addEventListener("focusout", infer);
+  addEventListener("resize", infer); window.visualViewport?.addEventListener("resize", infer);
+}
