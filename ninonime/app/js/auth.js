@@ -37,7 +37,7 @@ export function strength(p) {
   return sc >= 1 ? 2 : 1;
 }
 const SLABEL = ["", "Lemah", "Sedang", "Kuat"];
-const pwField = (up) => `<label>Password<span class="pw"><input name="pw" type="password" required minlength="8" autocomplete="${up ? "new-password" : "current-password"}" placeholder="Minimal 8 karakter"><button type="button" class="eye" data-act="eye" aria-label="Tampilkan password" aria-pressed="false">${icon("eye", 20)}</button></span></label>`;
+const pwField = (up) => `<label>Password<span class="pw"><input name="${up ? "npw" : "pw"}" id="${up ? "su-pw" : "si-pw"}" type="password" required minlength="8" autocomplete="${up ? "new-password" : "current-password"}" placeholder="Minimal 8 karakter"><button type="button" class="eye" data-act="eye" aria-label="Tampilkan password" aria-pressed="false">${icon("eye", 20)}</button></span></label>`;
 
 // teks salah di bawah kolom: di dalam label kolomnya, atau tepat sesudah baris centang
 function fieldErr(el, msg) {
@@ -52,21 +52,21 @@ export function authPage() {
   const front = `<form class="auth-face front" data-up="0" novalidate><div class="fc">
       <div class="pane p-login">
         <b class="b17">Masuk ke NinoNime</b>
-        <label>Username atau email<input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" placeholder="username atau nama@email.com"></label>
+        <label>Username atau email<input name="email" id="si-user" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" inputmode="email" placeholder="username atau nama@email.com"></label>
         ${pwField(false)}
         <span class="err" role="alert"></span>
         <div class="acts"><button class="btn primary" type="submit">Masuk</button>
         <button class="btn ghost" type="button" data-act="flip">Tidak memiliki akun? Daftar</button></div></div>
       <div class="pane p-forgot" hidden>
         <b class="b17">Lupa password?</b>
-        <label>Email<input name="femail" type="email" autocomplete="email" inputmode="email" placeholder="nama@email.com"></label>
+        <label>Email<input name="femail" id="fg-email" type="email" autocomplete="email" inputmode="email" placeholder="nama@email.com"></label>
         <span class="fg-msg" role="status">Kami kirim tautan untuk membuat password baru.</span>
         <div class="acts"><button class="btn primary" type="submit">Kirim tautan reset</button>
         <button class="btn ghost" type="button" data-act="fgback">Kembali ke Masuk</button></div></div></div></form>`;
   const back = `<form class="auth-face back" data-up="1" novalidate><div class="fc">
       <b class="b17">Daftar akun NinoNime</b>
-      <label>Username<input name="username" required autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="contoh: nino_fan"><span class="hint" data-for="username" aria-live="polite"></span></label>
-      <label>Email<input name="email" type="email" required autocomplete="email" inputmode="email" placeholder="nama@email.com"><span class="hint" data-for="email" aria-live="polite"></span></label>
+      <label>Username<input name="username" id="su-user" required autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="contoh: nino_fan"><span class="hint" data-for="username" aria-live="polite"></span></label>
+      <label>Email<input name="remail" id="su-email" type="email" required autocomplete="email" inputmode="email" placeholder="nama@email.com"><span class="hint" data-for="email" aria-live="polite"></span></label>
       ${pwField(true)}
       <span class="meter" data-s="0" aria-live="polite"><i></i><i></i><i></i><em>Kekuatan password</em></span>
       <label class="agree"><input name="agree" type="checkbox" required><span>Saya menyetujui <a href="#" data-act="terms">Ketentuan &amp; Privasi</a> NinoNime.</span></label>
@@ -140,17 +140,17 @@ export function authPage() {
     }, 450);
   };
   const checkMail = (final) => {
-    const v = q("email").value.trim();
+    const v = q("remail").value.trim();
     if (!v) { setHint("email", "", ""); return false; }
     const ok = validEmail(v);
     setHint("email", ok ? (final ? "Format email benar" : "") : (final ? "Format email belum benar. Contoh: nama@email.com" : ""), ok ? "ok" : "bad");
     return ok;
   };
   const meter = $(".meter", bf);
-  const checkPw = () => { const p = q("pw").value, s = p ? strength(p) : 0; meter.dataset.s = String(s); $("em", meter).textContent = s ? `Password ${SLABEL[s].toLowerCase()}${s === 1 && p.length < 8 ? " (minimal 8 karakter)" : ""}` : "Kekuatan password"; return s; };
+  const checkPw = () => { const p = q("npw").value, s = p ? strength(p) : 0; meter.dataset.s = String(s); $("em", meter).textContent = s ? `Password ${SLABEL[s].toLowerCase()}${s === 1 && p.length < 8 ? " (minimal 8 karakter)" : ""}` : "Kekuatan password"; return s; };
   q("username").addEventListener("input", checkUser);
-  q("email").addEventListener("input", () => checkMail(false)); q("email").addEventListener("blur", () => checkMail(true));
-  q("pw").addEventListener("input", checkPw);
+  q("remail").addEventListener("input", () => checkMail(false)); q("remail").addEventListener("blur", () => checkMail(true));
+  q("npw").addEventListener("input", checkPw);
   faces.forEach((f) => f.addEventListener("input", (e) => {
     e.target.classList.remove("inv");
     const lab = e.target.closest("label"); const fe = lab?.classList.contains("agree") ? lab.nextElementSibling : lab?.querySelector(":scope > .fe");
@@ -195,7 +195,7 @@ export function authPage() {
     e.preventDefault();
     if (form.dataset.up === "0" && fgMode) { sendReset(form); return; }
     const up = form.dataset.up === "1", f = new FormData(form), btn = form.querySelector("button[type=submit]"), err = form.querySelector(".err");
-    const email = String(f.get("email") || "").trim(), pw = String(f.get("pw") || "");
+    const email = String(f.get(up ? "remail" : "email") || "").trim(), pw = String(f.get(up ? "npw" : "pw") || "");
     // pesan salah tampil tepat di bawah kolomnya (kolom diberi garis merah); tanpa kolom → di bawah form
     const fail = (m, el) => {
       if (!el) { err.textContent = m; return; }
@@ -205,15 +205,15 @@ export function authPage() {
     err.textContent = "";
     $$(".inv", form).forEach((x) => x.classList.remove("inv")); $$(".fe", form).forEach((x) => { x.textContent = ""; });
     // kolom kosong dicek lebih dulu, urut dari atas
-    const empty = up ? [["username", "Username"], ["email", "Email"], ["pw", "Password"]] : [["email", "Username atau email"], ["pw", "Password"]];
+    const empty = up ? [["username", "Username"], ["remail", "Email"], ["npw", "Password"]] : [["email", "Username atau email"], ["pw", "Password"]];
     for (const [n, label] of empty) {
       const el = form.elements[n];
       if (!String(el.value || "").trim()) return fail(`${label} tidak boleh kosong.`, el);
     }
     const byName = !up && !email.includes("@");
-    if (!byName && !validEmail(email)) { if (up) { checkMail(true); form.elements.email.classList.add("inv"); form.elements.email.focus({ preventScroll: true }); return; } return fail("Format email belum benar. Contoh: nama@email.com", form.elements.email); }
+    if (!byName && !validEmail(email)) { if (up) { checkMail(true); form.elements.remail.classList.add("inv"); form.elements.remail.focus({ preventScroll: true }); return; } return fail("Format email belum benar. Contoh: nama@email.com", form.elements.email); }
     if (byName && !USER_RE.test(email.toLowerCase())) return fail("Username/email atau password salah.");
-    if (pw.length < 8) return fail("Password minimal 8 karakter.", form.elements.pw);
+    if (pw.length < 8) return fail("Password minimal 8 karakter.", form.elements[up ? "npw" : "pw"]);
     let username = "";
     if (up) {
       username = String(f.get("username") || "").trim().toLowerCase();
