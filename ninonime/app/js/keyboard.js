@@ -66,17 +66,32 @@ export function initKeyboard() {
     K.addListener("keyboardDidHide", () => setKeyboard(0, "did"));
     return;
   }
-  // tanpa plugin (browser/PWA): browser sendiri yang menggeser halaman saat keyboard muncul.
-  // Di sini TIDAK ada pengukuran layar, perapatan halaman, atau gulir otomatis: mengubah tata letak saat keyboard
-  // bergerak membuat Chrome Android menutup-buka keyboard terus-menerus. Cukup tandai "sedang mengetik" untuk
-  // menyembunyikan menu bawah.
-  let t = 0;
+  // tanpa plugin (browser/PWA): halaman TIDAK dirapatkan dan tidak dianimasikan saat keyboard bergerak (itu membuat
+  // keyboard Chrome Android buka-tutup terus). Yang dilakukan hanya:
+  //   1. "kb-typing": menu bawah disembunyikan + ruang kosong di bawah halaman, supaya halaman bisa digulir naik
+  //      (dipasang saat kolom disentuh, sebelum keyboard bergerak);
+  //   2. setelah keyboard selesai muncul, kolom yang disentuh digulir SEKALI ke atas keyboard bila tertutup.
+  let t = 0, done = null, offT = 0;
+  const lift = () => {
+    const a = typingEl(); if (!a || done === a) return;
+    const vv = window.visualViewport, bottomVis = vv ? vv.offsetTop + vv.height : innerHeight;
+    if (bottomVis > innerHeight - 80 && innerHeight === kbBase) return;      // keyboard belum terlihat: tunggu resize berikutnya
+    done = a;
+    const box = (a.closest("label") || a).getBoundingClientRect();
+    const need = box.bottom - (bottomVis - 20);
+    if (need > 0) scrollBy({ top: need, behavior: "smooth" });
+  };
   const mark = () => { clearTimeout(t); t = setTimeout(() => {
     const on = !!typingEl();
-    if (on !== document.body.classList.contains("kb-typing")) {
-      document.body.classList.toggle("kb-typing", on);
-      dispatchEvent(new CustomEvent("nn:kb", { detail: { open: on, phase: "did" } }));
-    }
+    if (on) { clearTimeout(offT); done = null; }
+    if (on && !document.body.classList.contains("kb-typing")) document.body.classList.add("kb-typing");
+    if (!on) offT = setTimeout(() => { if (!typingEl()) document.body.classList.remove("kb-typing"); }, 350);   // pindah kolom: ruang tidak hilang-muncul
+    if (on) { setTimeout(lift, 450); }                                       // cadangan bila browser tidak memicu resize
+    dispatchEvent(new CustomEvent("nn:kb", { detail: { open: on, phase: "did" } }));
   }, 30); };
   addEventListener("focusin", mark); addEventListener("focusout", mark);
+  // sentuh ulang kolom yang sudah fokus (keyboard sempat ditutup lewat tombol kembali)
+  addEventListener("pointerup", (e) => { if (e.target === typingEl()) { done = null; setTimeout(lift, 450); } });
+  window.visualViewport?.addEventListener("resize", () => { if (typingEl()) setTimeout(lift, 60); else done = null; });
+  addEventListener("resize", () => { if (typingEl()) setTimeout(lift, 60); });
 }

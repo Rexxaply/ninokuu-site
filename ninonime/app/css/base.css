@@ -214,6 +214,7 @@ body[data-screen="chat"] .pad-nav { display: none; }
 .flt-host { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
 @keyframes fadeIn { from { opacity: 0; } }
 body.kb-open .pad-nav { height: calc(var(--kb, 0px) + 24px); }
+body.kb-typing:not(.kb-native) .pad-nav { height: 55vh; }
 .mt8 { margin-top: 8px; }
 @keyframes dlPop { from { transform: scale(.4); opacity: 0; } }
 @keyframes dlPulse { 50% { box-shadow: 0 0 0 6px rgba(242, 179, 61, 0); background: rgba(242, 179, 61, .35); } }
