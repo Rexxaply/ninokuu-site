@@ -9,7 +9,7 @@
 <meta property="og:title" content="Ninokuu">
 <meta property="og:description" content="Unduh aplikasi Android Ninokuu untuk membaca manga, manhwa, dan manhua.">
 <meta property="og:image" content="https://ninokuu.site/icon.png">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com; base-uri 'none'; object-src 'none'; form-action 'none'">
 <link rel="icon" href="favicon.png">
 <style>
   :root { --bg: #0B1018; --s1: #141B27; --line: #273244; --tx: #F2F4F8; --mu: #A3ACBD; --red: #E0242B; }
@@ -80,6 +80,7 @@
       <li><b>Ketuk Instal</b>, lalu buka Ninokuu. Untuk versi baru, pasang saja di atas versi lama: koleksi, riwayat, dan akunmu tetap aman.</li>
     </ol>
   </section>
+  <p class="agree" id="sha" hidden></p>
   <footer><a href="syarat/">Syarat &amp; Ketentuan</a> · © Ninokuu</footer>
 </main>
 <script>
@@ -95,8 +96,11 @@
     .then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (!j) return;
       const v = (String(j.name || "").match(/v(\d+\.\d+\.\d+)/) || [])[1];
-      const a = (j.assets || []).find((x) => /\.apk$/i.test(x.name));
+      const a = (j.assets || []).find((x) => /\.apk$/i.test(x.name) && String(x.browser_download_url).startsWith("https://github.com/Rexxaply/NinoKuu-Manga/releases/download/"));
+      if (!a) return; // bukan dari repo resmi: abaikan
       const mb = a ? (a.size / 1048576).toFixed(1).replace(".", ",") + " MB" : "";
+      const d = String(a && a.digest || "").replace(/^sha256:/, "");
+      if (/^[0-9a-f]{64}$/.test(d)) { const e = document.getElementById("sha"); e.textContent = "SHA-256 ninokuu.apk: " + d.slice(0, 8) + "…" + d.slice(-8); e.hidden = false; }
       document.getElementById("meta").textContent = [v && "Versi " + v, mb].filter(Boolean).join(" · ");
     }).catch(() => {});
 </script>
