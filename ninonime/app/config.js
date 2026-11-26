@@ -14,5 +14,7 @@ window.NINONIME_CONFIG = {
   // Tujuan tautan di email "lupa password":
   RESET_URL: "https://ninokuu.site/ninonime/resetpassword/",
   // nomor bot WhatsApp yang membuat keypass (format internasional, tanpa +)
+  // Versi demo: semua sampul anime diganti sampul bertanda NinoNime (icons/demo-cover.jpg). false = sampul asli.
+  DEMO_COVERS: true,
   WA_BOT: "6285190814446",
 };

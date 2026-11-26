@@ -39,9 +39,10 @@ function trimCache() {
 setTimeout(trimCache, 8000);
 
 const ytId = (t) => t?.youtube_id || (String(t?.embed_url || "").match(/embed\/([\w-]{11})/) || [])[1] || "";
+const DEMO = window.NINONIME_CONFIG?.DEMO_COVERS ? "icons/demo-cover.jpg" : "";   // versi demo: sampul NinoNime
 const mapA = (a) => ({
   id: a.mal_id, title: a.title || a.title_english || "", alt: a.title_english && a.title_english !== a.title ? a.title_english : "",
-  cover: a.images?.webp?.large_image_url || a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || "",
+  cover: DEMO || a.images?.webp?.large_image_url || a.images?.jpg?.large_image_url || a.images?.jpg?.image_url || "",
   score: a.score, eps: a.episodes, status: a.status, airing: !!a.airing, type: a.type, year: a.year || a.aired?.prop?.from?.year,
   season: a.season, members: a.members, rating: a.rating, duration: a.duration, studios: (a.studios || []).map((s) => s.name),
   genres: [...(a.genres || []), ...(a.themes || [])].map((g) => g.name), synopsis: a.synopsis || "",
@@ -56,7 +57,7 @@ export const A = {
   search: async (q, page = 1, type = "") => { const r = await jget(`/anime?q=${encodeURIComponent(q)}&${SFW}&limit=24&page=${page}&order_by=members&sort=desc${type ? "&type=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
   detail: async (id) => mapA((await jget(`/anime/${id}/full`, 360)).data || {}),
   // gambar per episode (kalau ada di MyAnimeList): { nomor: url }
-  epThumbs: async (id) => { const o = {}; ((await jget(`/anime/${id}/videos/episodes`, 360)).data || []).forEach((v) => { const n = Number(String(v.episode || "").replace(/\D+/g, "")) || v.mal_id; const u = v.images?.jpg?.image_url; if (n && u) o[n] = u; }); return o; },
+  epThumbs: async (id) => { if (DEMO) return {}; const o = {}; ((await jget(`/anime/${id}/videos/episodes`, 360)).data || []).forEach((v) => { const n = Number(String(v.episode || "").replace(/\D+/g, "")) || v.mal_id; const u = v.images?.jpg?.image_url; if (n && u) o[n] = u; }); return o; },
   episodes: async (id) => ((await jget(`/anime/${id}/episodes`, 120)).data || []).map((e) => ({ n: e.mal_id, title: e.title || "", aired: e.aired, filler: e.filler, recap: e.recap })),
   // jadwal satu hari JST (semua halaman, maks 3)
   jpDay: async (d) => {
