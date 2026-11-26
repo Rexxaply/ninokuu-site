@@ -171,7 +171,7 @@ body[data-screen="reader"] { background: #0A0A0A; overflow: hidden; }
 #nav { position: fixed; z-index: 20; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); width: min(100% - 28px, 520px); height: 68px; display: flex; padding: 6px;
   --nw: 362px; --nwn: 362; --tw: calc((var(--nw) - 12px) / 4);
   transform: translateX(-50%); transition: transform .35s cubic-bezier(.2, .8, .2, 1); }
-body.nav-off #nav, body.kb-open #nav { transform: translate(-50%, calc(100% + 24px + env(safe-area-inset-bottom))); pointer-events: none; }
+body.nav-off #nav, body.kb-open #nav, body.kb-typing #nav { transform: translate(-50%, calc(100% + 24px + env(safe-area-inset-bottom))); pointer-events: none; }
 .nav-bg { position: absolute; top: 0; bottom: 0; left: 50%; width: 100%; transform: translateX(-50%); border-radius: 34px; pointer-events: none;
   background: var(--glass-bg); backdrop-filter: var(--glass); -webkit-backdrop-filter: var(--glass); border: 1px solid rgba(255, 255, 255, .13);
   box-shadow: 0 12px 32px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .16); transition: width .5s cubic-bezier(.32, .72, 0, 1); }

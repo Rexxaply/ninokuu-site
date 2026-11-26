@@ -14,5 +14,5 @@ window.NINONIME_CONFIG = {
   // Tujuan tautan di email "lupa password":
   RESET_URL: "https://ninokuu.site/ninonime/resetpassword/",
   // nomor bot WhatsApp yang membuat keypass (format internasional, tanpa +)
-  WA_BOT: "628115214446",
+  WA_BOT: "6285190814446",
 };

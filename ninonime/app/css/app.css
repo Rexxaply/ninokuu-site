@@ -82,9 +82,9 @@
 /* keyboard terbuka: bagian atas halaman login dirapatkan agar kartu muat */
 .auth-page .gate-logo, .auth-page .ct { transition: width .3s cubic-bezier(.23, 1, .32, 1), margin .3s, opacity .25s, max-height .3s; }
 .auth-page .ct { max-height: 40px; }
-body.kb-open .auth-page { padding-top: 10px; }
-body.kb-open .auth-page .gate-logo { width: 150px; margin-bottom: 0; }
-body.kb-open .auth-page .ct { opacity: 0; max-height: 0; margin: 4px 0 8px; overflow: hidden; }
+body.kb-native.kb-open .auth-page { padding-top: 10px; }
+body.kb-native.kb-open .auth-page .gate-logo { width: 150px; margin-bottom: 0; }
+body.kb-native.kb-open .auth-page .ct { opacity: 0; max-height: 0; margin: 4px 0 8px; overflow: hidden; }
 
 /* ---------- kartu keypass di Beranda ---------- */
 .kg { display: flex; flex-direction: column; align-items: center; padding: 34px 16px 0; }

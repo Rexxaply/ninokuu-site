@@ -43,37 +43,40 @@ function setKeyboard(h, phase) {
 }
 
 // layar menyusut/membesar saat keyboard: kartu & isi meluncur halus dari posisi lama (bukan melompat)
-let flipH = innerHeight;
+let flipH = innerHeight, native = false;
 addEventListener("resize", () => {
+  if (!native) return;
   if (kbOpen) { if (kbH) { applyKb(); setTimeout(reveal, 80); } } else if (innerHeight > kbBase) kbBase = innerHeight;
   const d = innerHeight - flipH; flipH = innerHeight;
   const pg = document.querySelector(".auth-page");
   if (Math.abs(d) < 80 || !pg || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   pg.animate([{ transform: `translate3d(0, ${-d / 3}px, 0)` }, { transform: "translate3d(0, 0, 0)" }], { duration: 280, easing: "cubic-bezier(.2, .8, .2, 1)" });
 });
-window.visualViewport?.addEventListener("resize", () => { if (kbOpen) applyKb(); });
-window.visualViewport?.addEventListener("scroll", () => { if (kbOpen) applyKb(); });
+window.visualViewport?.addEventListener("resize", () => { if (native && kbOpen) applyKb(); });
+window.visualViewport?.addEventListener("scroll", () => { if (native && kbOpen) applyKb(); });
 addEventListener("orientationchange", () => setTimeout(() => { if (!kbOpen) kbBase = innerHeight; }, 400));
 
 export function initKeyboard() {
   const K = plugin();
   if (K) {
+    native = true; document.body.classList.add("kb-native");
     K.addListener("keyboardWillShow", (i) => setKeyboard(Number(i?.keyboardHeight) || 0, "will"));
     K.addListener("keyboardDidShow", (i) => setKeyboard(Number(i?.keyboardHeight) || 0, "did"));
     K.addListener("keyboardWillHide", () => setKeyboard(0, "will"));
     K.addListener("keyboardDidHide", () => setKeyboard(0, "did"));
     return;
   }
-  // tanpa plugin (browser/PWA): simpulkan dari visualViewport + fokus kolom isian
+  // tanpa plugin (browser/PWA): browser sendiri yang menggeser halaman saat keyboard muncul.
+  // Di sini TIDAK ada pengukuran layar, perapatan halaman, atau gulir otomatis: mengubah tata letak saat keyboard
+  // bergerak membuat Chrome Android menutup-buka keyboard terus-menerus. Cukup tandai "sedang mengetik" untuk
+  // menyembunyikan menu bawah.
   let t = 0;
-  const infer = () => {
-    clearTimeout(t); t = setTimeout(() => {
-      const vv = window.visualViewport, typing = !!typingEl();
-      if (!typing && !kbOpen) kbBase = Math.max(innerHeight, vv ? vv.height + vv.offsetTop : 0);
-      const h = typing ? Math.round(kbBase - (vv ? vv.height + vv.offsetTop : innerHeight)) : 0;
-      if (h > 80) { if (!kbOpen || kbH !== h) { setKeyboard(h, "will"); setKeyboard(h, "did"); } } else if (kbOpen) { setKeyboard(0, "will"); setKeyboard(0, "did"); }
-    }, 50);
-  };
-  addEventListener("focusin", infer); addEventListener("focusout", infer);
-  addEventListener("resize", infer); window.visualViewport?.addEventListener("resize", infer);
+  const mark = () => { clearTimeout(t); t = setTimeout(() => {
+    const on = !!typingEl();
+    if (on !== document.body.classList.contains("kb-typing")) {
+      document.body.classList.toggle("kb-typing", on);
+      dispatchEvent(new CustomEvent("nn:kb", { detail: { open: on, phase: "did" } }));
+    }
+  }, 30); };
+  addEventListener("focusin", mark); addEventListener("focusout", mark);
 }
