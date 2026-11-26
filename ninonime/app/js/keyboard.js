@@ -76,11 +76,23 @@ export function initKeyboard() {
     if (box.top >= 8 && box.bottom <= innerHeight - 12) return;              // sudah terlihat
     scrollBy({ top: (box.top + box.bottom) / 2 - innerHeight / 2, behavior: "smooth" });
   };
-  let rt = 0;
+  // Halaman login dirapatkan (logo mengecil, teks "Masuk dulu…" hilang) begitu kolom DISENTUH, sebelum keyboard
+  // mulai bergerak, dan baru dilepas setelah keyboard benar-benar tertutup. Jadi tata letak tidak berubah di
+  // tengah gerak keyboard (itu yang dulu membuat keyboard naik-turun).
+  const B = document.body;
+  const compact = (on) => B.classList.toggle("kb-compact", on);
+  let rt = 0, small = false;
   addEventListener("resize", () => {
     if (!typingEl() && innerHeight > kbBase) kbBase = innerHeight;
-    clearTimeout(rt); rt = setTimeout(center, 120);                          // tunggu layar berhenti menyusut
+    clearTimeout(rt); rt = setTimeout(() => {                                // tunggu layar berhenti berubah
+      const isSmall = innerHeight < kbBase - 80;
+      if (small && !isSmall) compact(false);                                 // keyboard ditutup (kolom masih fokus)
+      small = isSmall;
+      center();
+    }, 150);
   });
-  addEventListener("focusin", () => { document.body.classList.add("kb-typing"); setTimeout(center, 350); });
-  addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) document.body.classList.remove("kb-typing"); }, 200));
+  addEventListener("focusin", () => { if (!typingEl()) return; B.classList.add("kb-typing"); compact(true); setTimeout(center, 350); });
+  addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) { B.classList.remove("kb-typing"); compact(false); } }, 200));
+  // sentuh lagi kolom yang masih fokus setelah keyboard ditutup → keyboard muncul lagi, halaman dirapatkan lagi
+  addEventListener("pointerdown", (e) => { if (e.target === typingEl()) compact(true); });
 }
