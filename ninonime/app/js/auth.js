@@ -39,6 +39,15 @@ export function strength(p) {
 const SLABEL = ["", "Lemah", "Sedang", "Kuat"];
 const pwField = (up) => `<label>Password<span class="pw"><input name="pw" type="password" required minlength="8" autocomplete="${up ? "new-password" : "current-password"}" placeholder="Minimal 8 karakter"><button type="button" class="eye" data-act="eye" aria-label="Tampilkan password" aria-pressed="false">${icon("eye", 20)}</button></span></label>`;
 
+// teks salah di bawah kolom: di dalam label kolomnya, atau tepat sesudah baris centang
+function fieldErr(el, msg) {
+  const lab = el.closest("label"); if (!lab) return;
+  const agree = lab.classList.contains("agree");
+  let fe = agree ? lab.nextElementSibling : lab.querySelector(":scope > .fe");
+  if (!fe || !fe.classList?.contains("fe")) { fe = document.createElement("span"); fe.className = "fe"; fe.setAttribute("role", "alert"); agree ? lab.after(fe) : lab.append(fe); }
+  fe.textContent = msg;
+}
+
 export function authPage() {
   const front = `<form class="auth-face front" data-up="0" novalidate><div class="fc">
       <div class="pane p-login">
@@ -144,6 +153,8 @@ export function authPage() {
   q("pw").addEventListener("input", checkPw);
   faces.forEach((f) => f.addEventListener("input", (e) => {
     e.target.classList.remove("inv");
+    const lab = e.target.closest("label"); const fe = lab?.classList.contains("agree") ? lab.nextElementSibling : lab?.querySelector(":scope > .fe");
+    if (fe?.classList.contains("fe")) fe.textContent = "";
     if (e.target.name === "agree" && e.target.checked) { e.target.closest(".agree")?.classList.remove("inv", "shake"); const er = $(".err", f); if (/Ketentuan/.test(er.textContent)) er.textContent = ""; }
   }));
 
@@ -161,9 +172,9 @@ export function authPage() {
   };
   const sendReset = async (form) => {
     const em = fEmail.value.trim(), btn = form.querySelector(".p-forgot button[type=submit]");
-    fEmail.classList.toggle("inv", !em);
-    if (!em) { fgMsg.dataset.k = "bad"; fgMsg.textContent = "Email tidak boleh kosong."; fEmail.focus({ preventScroll: true }); return; }
-    if (!validEmail(em)) { fgMsg.dataset.k = "bad"; fgMsg.textContent = "Isi email yang formatnya benar."; return; }
+    fEmail.classList.remove("inv"); fieldErr(fEmail, "");
+    if (!em) { fEmail.classList.add("inv"); fieldErr(fEmail, "Email tidak boleh kosong."); fEmail.focus({ preventScroll: true }); return; }
+    if (!validEmail(em)) { fEmail.classList.add("inv"); fieldErr(fEmail, "Format email belum benar. Contoh: nama@email.com"); fEmail.focus({ preventScroll: true }); return; }
     btn.disabled = true; fgMsg.dataset.k = ""; fgMsg.textContent = "Mengirim…";
     try { await api.recover(em); fgMsg.dataset.k = "ok"; fgMsg.textContent = "Jika email itu terdaftar, tautan reset sudah dikirim. Cek kotak masuk dan folder spam.";
       await ask(`Jika ${em} terdaftar, tautan reset password sudah dikirim. Buka emailmu (cek juga folder spam) lalu tekan tautannya: kamu akan diarahkan ke halaman reset password NinoNime. Setelah password baru tersimpan, kembali ke NinoNime dan masuk.`, { title: "Tautan reset terkirim", ok: "Mengerti", cancel: "" }); }
@@ -184,18 +195,24 @@ export function authPage() {
     e.preventDefault();
     if (form.dataset.up === "0" && fgMode) { sendReset(form); return; }
     const up = form.dataset.up === "1", f = new FormData(form), btn = form.querySelector("button[type=submit]"), err = form.querySelector(".err");
-    const email = String(f.get("email") || "").trim(), pw = String(f.get("pw") || ""), fail = (m, el) => { err.textContent = m; el?.focus({ preventScroll: true }); };
+    const email = String(f.get("email") || "").trim(), pw = String(f.get("pw") || "");
+    // pesan salah tampil tepat di bawah kolomnya (kolom diberi garis merah); tanpa kolom → di bawah form
+    const fail = (m, el) => {
+      if (!el) { err.textContent = m; return; }
+      el.classList.add("inv"); fieldErr(el, m);
+      if (el.type !== "checkbox") el.focus({ preventScroll: true });
+    };
     err.textContent = "";
-    $$(".inv", form).forEach((x) => x.classList.remove("inv"));
+    $$(".inv", form).forEach((x) => x.classList.remove("inv")); $$(".fe", form).forEach((x) => { x.textContent = ""; });
     // kolom kosong dicek lebih dulu, urut dari atas
     const empty = up ? [["username", "Username"], ["email", "Email"], ["pw", "Password"]] : [["email", "Username atau email"], ["pw", "Password"]];
     for (const [n, label] of empty) {
       const el = form.elements[n];
-      if (!String(el.value || "").trim()) { el.classList.add("inv"); return fail(`${label} tidak boleh kosong.`, el); }
+      if (!String(el.value || "").trim()) return fail(`${label} tidak boleh kosong.`, el);
     }
     const byName = !up && !email.includes("@");
-    if (!byName && !validEmail(email)) { if (up) checkMail(true); return fail("Format email belum benar. Contoh: nama@email.com", form.elements.email); }
-    if (byName && !USER_RE.test(email.toLowerCase())) return fail("Username/email atau password salah.", form.elements.email);
+    if (!byName && !validEmail(email)) { if (up) { checkMail(true); form.elements.email.classList.add("inv"); form.elements.email.focus({ preventScroll: true }); return; } return fail("Format email belum benar. Contoh: nama@email.com", form.elements.email); }
+    if (byName && !USER_RE.test(email.toLowerCase())) return fail("Username/email atau password salah.");
     if (pw.length < 8) return fail("Password minimal 8 karakter.", form.elements.pw);
     let username = "";
     if (up) {
@@ -204,7 +221,7 @@ export function authPage() {
       if (uOk === false) return fail("Username sudah dipakai atau tidak valid.", form.elements.username);
       if (!f.get("agree")) {
         const ag = form.querySelector(".agree"); ag.classList.remove("inv", "shake"); void ag.offsetWidth; ag.classList.add("inv", "shake");
-        return fail("Centang persetujuan Ketentuan & Privasi terlebih dahulu.");
+        return fail("Centang persetujuan Ketentuan & Privasi terlebih dahulu.", form.elements.agree);
       }
     }
     btn.disabled = true;

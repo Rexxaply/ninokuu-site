@@ -66,46 +66,21 @@ export function initKeyboard() {
     K.addListener("keyboardDidHide", () => setKeyboard(0, "did"));
     return;
   }
-  // tanpa plugin (browser/PWA): halaman TIDAK dirapatkan dan tidak dianimasikan saat keyboard bergerak (itu membuat
-  // keyboard Chrome Android buka-tutup terus). Yang dilakukan hanya:
-  //   1. "kb-typing": menu bawah disembunyikan + ruang kosong di bawah halaman, supaya halaman bisa digulir naik;
-  //   2. keyboard selesai muncul → kolom yang disentuh digulir SEKALI ke atas keyboard bila tertutup;
-  //   3. keyboard ditutup (tombol kembali / panah bawah) → ruang kosong dilepas, halaman kembali ke posisi semula.
-  let t = 0, offT = 0, shown = false, prevY = 0, lifted = false;
-  const visible = () => {
-    const vv = window.visualViewport, bottomVis = vv ? vv.offsetTop + vv.height : innerHeight;
-    return innerHeight < kbBase - 80 || innerHeight - bottomVis > 80;
+  // tanpa plugin (browser/PWA): sama dengan Ninokuu Manga di browser. Chrome sendiri yang menyusutkan layar
+  // (interactive-widget=resizes-content); aplikasi TIDAK merapatkan, menganimasikan, atau menambah ruang.
+  // Satu-satunya bantuan (seperti Ninokuu saat keyboard muncul): setelah layar selesai menyusut, kolom yang
+  // disentuh digulir ke tengah area yang terlihat, sekali.
+  const center = () => {
+    const a = typingEl(); if (!a || innerHeight > kbBase - 80) return;      // keyboard tidak terbuka
+    const box = (a.closest("label") || a).getBoundingClientRect();
+    if (box.top >= 8 && box.bottom <= innerHeight - 12) return;              // sudah terlihat
+    scrollBy({ top: (box.top + box.bottom) / 2 - innerHeight / 2, behavior: "smooth" });
   };
-  const lift = () => {
-    const a = typingEl(); if (!a) return;
-    const vv = window.visualViewport, bottomVis = vv ? vv.offsetTop + vv.height : innerHeight;
-    const box = (a.closest("label") || a).getBoundingClientRect(), need = box.bottom - (bottomVis - 20);
-    if (need > 0) { if (!lifted) prevY = scrollY; lifted = true; scrollBy({ top: need, behavior: "smooth" }); }
-  };
-  const settle = () => {                                                    // keyboard tertutup
-    document.body.classList.remove("kb-typing");
-    if (lifted) scrollTo({ top: prevY, behavior: "smooth" });
-    lifted = false;
-  };
-  const check = () => {
-    const v = visible();
-    if (v && !shown) { shown = true; if (typingEl()) { document.body.classList.add("kb-typing"); lift(); } }
-    else if (!v && shown) { shown = false; settle(); }
-    else if (v && typingEl()) lift();
-    if (!v && !typingEl()) kbBase = Math.max(kbBase, innerHeight);
-  };
-  const mark = () => { clearTimeout(t); t = setTimeout(() => {
-    const on = !!typingEl();
-    if (on) { clearTimeout(offT); document.body.classList.add("kb-typing"); setTimeout(() => (visible() ? lift() : 0), 450); }
-    else offT = setTimeout(() => { if (!typingEl()) settle(); }, 350);     // pindah kolom: ruang tidak hilang-muncul
-    dispatchEvent(new CustomEvent("nn:kb", { detail: { open: on, phase: "did" } }));
-  }, 30); };
-  addEventListener("focusin", mark); addEventListener("focusout", mark);
-  // sentuh ulang kolom yang masih fokus setelah keyboard ditutup: keyboard muncul lagi → naik lagi
-  addEventListener("pointerup", (e) => { if (e.target === typingEl()) { document.body.classList.add("kb-typing"); setTimeout(() => (visible() ? lift() : 0), 450); } });
-  // tunggu ukuran layar tenang dulu (keyboard selesai bergerak) sebelum menggulir: menggulir di tengah animasi
-  // keyboard membuat Chrome menutupnya lagi
-  let ct = 0; const later = () => { clearTimeout(ct); ct = setTimeout(check, 220); };
-  window.visualViewport?.addEventListener("resize", later);
-  addEventListener("resize", later);
+  let rt = 0;
+  addEventListener("resize", () => {
+    if (!typingEl() && innerHeight > kbBase) kbBase = innerHeight;
+    clearTimeout(rt); rt = setTimeout(center, 120);                          // tunggu layar berhenti menyusut
+  });
+  addEventListener("focusin", () => { document.body.classList.add("kb-typing"); setTimeout(center, 350); });
+  addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) document.body.classList.remove("kb-typing"); }, 200));
 }

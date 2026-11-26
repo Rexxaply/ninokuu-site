@@ -113,3 +113,7 @@ body.kb-native.kb-open .auth-page .ct { opacity: 0; max-height: 0; margin: 4px 0
 .terms ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .terms li { position: relative; padding-left: 16px; font-size: 14px; line-height: 1.55; color: var(--soft); text-align: left; }
 .terms li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+.auth-face .fe { display: block; margin-top: 6px; font-size: 12.5px; font-weight: 500; line-height: 1.4; color: #ff7a7a; animation: feIn .2s ease-out; }
+.auth-face .fe:empty { display: none; }
+.auth-face .agree + .fe { margin: -4px 0 0 30px; }
+@keyframes feIn { from { opacity: 0; transform: translateY(-3px); } }
