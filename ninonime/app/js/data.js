@@ -51,9 +51,9 @@ const mapA = (a) => ({
 export const uniq = (list) => { const s = new Set(); return list.filter((x) => !s.has(x.id) && s.add(x.id)); };
 const SFW = "sfw=true";
 export const A = {
-  now: async (page = 1) => { const r = await jget(`/seasons/now?${SFW}&limit=24&page=${page}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
+  now: async (page = 1, type = "") => { const r = await jget(`/seasons/now?${SFW}&limit=24&page=${page}${type ? "&filter=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
   top: async () => uniq(((await jget(`/top/anime?filter=airing&${SFW}&limit=10`, 180)).data || []).map(mapA)),
-  search: async (q, page = 1) => { const r = await jget(`/anime?q=${encodeURIComponent(q)}&${SFW}&limit=24&page=${page}&order_by=members&sort=desc`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
+  search: async (q, page = 1, type = "") => { const r = await jget(`/anime?q=${encodeURIComponent(q)}&${SFW}&limit=24&page=${page}&order_by=members&sort=desc${type ? "&type=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
   detail: async (id) => mapA((await jget(`/anime/${id}/full`, 360)).data || {}),
   // gambar per episode (kalau ada di MyAnimeList): { nomor: url }
   epThumbs: async (id) => { const o = {}; ((await jget(`/anime/${id}/videos/episodes`, 360)).data || []).forEach((v) => { const n = Number(String(v.episode || "").replace(/\D+/g, "")) || v.mal_id; const u = v.images?.jpg?.image_url; if (n && u) o[n] = u; }); return o; },

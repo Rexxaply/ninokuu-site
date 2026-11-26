@@ -8,7 +8,7 @@ let authMode = "in";
 /* ---------- halaman masuk / daftar (kartu berbalik) ---------- */
 // Masuk di sisi depan, Daftar di sisi belakang. "Tidak memiliki akun" membalik kartu ke kiri; "Sudah punya akun" membaliknya ke kanan.
 // Balik kartu digerakkan pegas (bukan durasi tetap): bisa disentuh ulang di tengah jalan, lalu berbalik dari posisinya saat itu.
-const TERMS = `<div class="terms">
+export const TERMS = `<div class="terms">
   <h4>Penggunaan</h4>
   <ul><li>NinoNime hanya untuk pengguna yang diundang pemiliknya.</li>
   <li>NinoNime tidak menyediakan atau menautkan sumber bajakan. Tombol tonton hanya mengarah ke layanan resmi.</li></ul>

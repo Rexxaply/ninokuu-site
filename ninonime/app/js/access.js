@@ -118,7 +118,8 @@ export function keypassSection() {
   return `<section class="sec"><h2 class="cap">Keypass</h2><div class="group">
     <div class="mrow kp-row"><span class="mrow-ic">${icon("key", 20)}</span><span class="rc-mid"><b>Keypass NinoNime</b><code class="kp-code" id="kpCode" data-shown="0">${"•".repeat(14)}</code></span>
       <button class="sq-btn" data-act="kpShow" aria-label="Tampilkan keypass" aria-pressed="false">${icon("eye", 18, 2)}</button>
-      <button class="sq-btn" data-act="kpCopy" aria-label="Salin keypass">${icon("copy", 18, 2)}</button></div></div>
+      <button class="sq-btn" data-act="kpCopy" aria-label="Salin keypass">${icon("copy", 18, 2)}</button></div>
+    <button class="mrow danger" data-act="kpDel"><span class="mrow-ic">${icon("trash", 19)}</span><span class="rc-mid"><b>Hapus keypass</b><span class="mu sm">Lepas keypass dari akun ini</span></span></button></div>
     <p class="mu xs lh px6">Keypass ini terikat ke akunmu. Jangan dibagikan.</p></section>`;
 }
 export function keypassActs(redraw) {
