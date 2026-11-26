@@ -100,3 +100,16 @@ body.kb-native.kb-open .auth-page .ct { opacity: 0; max-height: 0; margin: 4px 0
 .kg-card.kp-ok { animation: none; transform: scale(1.02); transition: transform .3s; }
 .kg-card.shake { animation: kpShake .4s; }
 .kg-card.kp-ok .kp-ic { animation: kpOk .5s cubic-bezier(.2, .9, .3, 1.4); background: linear-gradient(145deg, #2FBF71, #1B7F4C); color: #fff; }
+
+/* kolom wajib yang kosong / belum benar */
+.auth-face input.inv { border-color: rgba(255, 77, 94, .75) !important; box-shadow: 0 0 0 3px rgba(255, 77, 94, .14); }
+.auth-face .agree.inv { color: var(--redt); }
+.auth-face .agree.inv input { outline: 2px solid rgba(255, 77, 94, .8); outline-offset: 2px; }
+.auth-face .agree.shake { animation: kpShake .4s; }
+/* kartu Ketentuan & Privasi */
+.ask-html { max-height: min(66vh, 540px); overflow-y: auto; overscroll-behavior: contain; padding-right: 6px; }
+.terms h4 { margin: 14px 0 6px; font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--tx); text-transform: uppercase; }
+.terms h4:first-child { margin-top: 2px; }
+.terms ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.terms li { position: relative; padding-left: 16px; font-size: 14px; line-height: 1.55; color: var(--soft); text-align: left; }
+.terms li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--red); }

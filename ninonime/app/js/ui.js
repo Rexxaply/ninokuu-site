@@ -17,13 +17,13 @@ export function toast(msg, ms = 2600) {
 // dialog konfirmasi → Promise<boolean>
 let askOpen = null;
 export const closeAsk = () => { if (!askOpen) return false; askOpen(false); return true; };
-export function ask(msg, { title = "", ok = "OK", cancel = "Batal", danger = false } = {}) {
+export function ask(msg, { title = "", ok = "OK", cancel = "Batal", danger = false, html = "" } = {}) {
   closeAsk();
   return new Promise((resolve) => {
     const host = document.createElement("div");
     host.className = "ask-host";
     host.innerHTML = `<div class="ask-bg" data-a="no"></div><div class="ask glass" role="alertdialog" aria-modal="true">
-      ${title ? `<b class="ask-ttl">${esc(title)}</b>` : ""}${msg ? `<p class="ask-msg">${esc(msg)}</p>` : ""}
+      ${title ? `<b class="ask-ttl">${esc(title)}</b>` : ""}${html ? `<div class="ask-msg ask-html">${html}</div>` : msg ? `<p class="ask-msg">${esc(msg)}</p>` : ""}
       <div class="ask-acts">${cancel ? `<button class="ask-b" data-a="no">${esc(cancel)}</button>` : ""}<button class="ask-b ${danger ? "danger" : "ok"}" data-a="yes">${esc(ok)}</button></div></div>`;
     document.body.append(host);
     requestAnimationFrame(() => host.classList.add("on"));

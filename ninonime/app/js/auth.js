@@ -8,7 +8,17 @@ let authMode = "in";
 /* ---------- halaman masuk / daftar (kartu berbalik) ---------- */
 // Masuk di sisi depan, Daftar di sisi belakang. "Tidak memiliki akun" membalik kartu ke kiri; "Sudah punya akun" membaliknya ke kanan.
 // Balik kartu digerakkan pegas (bukan durasi tetap): bisa disentuh ulang di tengah jalan, lalu berbalik dari posisinya saat itu.
-const TERMS = "Ketentuan penggunaan NinoNime\n\n• Aplikasi ini hanya untuk lingkaran pengguna yang diundang pemiliknya.\n• Keypass bersifat pribadi: jangan dibagikan atau dijual.\n• Kami menyimpan email, username, dan data akunmu di server untuk login dan akses. Password disimpan terenkripsi, bukan teks asli.\n• Daftar favorit disimpan di perangkatmu.\n• Pemilik dapat mencabut keypass bila ada penyalahgunaan.";
+const TERMS = `<div class="terms">
+  <h4>Penggunaan</h4>
+  <ul><li>NinoNime hanya untuk pengguna yang diundang pemiliknya.</li>
+  <li>NinoNime tidak menyediakan atau menautkan sumber bajakan. Tombol tonton hanya mengarah ke layanan resmi.</li></ul>
+  <h4>Akun &amp; keypass</h4>
+  <ul><li>Keypass bersifat pribadi: jangan dibagikan atau dijual.</li>
+  <li>Pemilik dapat mencabut keypass bila ada penyalahgunaan.</li></ul>
+  <h4>Data &amp; privasi</h4>
+  <ul><li>Email, username, dan data akunmu disimpan di server untuk login dan akses.</li>
+  <li>Password disimpan terenkripsi, bukan teks asli.</li>
+  <li>Daftar favorit hanya disimpan di perangkatmu.</li></ul></div>`;
 let flipUp = false;
 const FG_HINT = "Kami kirim tautan untuk membuat password baru.";
 const EMAIL_RE = /^(?!.*\.\.)[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\.[A-Za-z]{2,}$/;
@@ -132,6 +142,10 @@ export function authPage() {
   q("username").addEventListener("input", checkUser);
   q("email").addEventListener("input", () => checkMail(false)); q("email").addEventListener("blur", () => checkMail(true));
   q("pw").addEventListener("input", checkPw);
+  faces.forEach((f) => f.addEventListener("input", (e) => {
+    e.target.classList.remove("inv");
+    if (e.target.name === "agree" && e.target.checked) { e.target.closest(".agree")?.classList.remove("inv", "shake"); const er = $(".err", f); if (/Ketentuan/.test(er.textContent)) er.textContent = ""; }
+  }));
 
   /* lupa password: kartu Masuk berubah isi di tempat dan mengecil mengikuti kolomnya */
   const pLogin = $(".p-login", flip), pForgot = $(".p-forgot", flip), fgMsg = $(".fg-msg", flip), fEmail = faceOf(false).elements.femail;
@@ -147,6 +161,8 @@ export function authPage() {
   };
   const sendReset = async (form) => {
     const em = fEmail.value.trim(), btn = form.querySelector(".p-forgot button[type=submit]");
+    fEmail.classList.toggle("inv", !em);
+    if (!em) { fgMsg.dataset.k = "bad"; fgMsg.textContent = "Email tidak boleh kosong."; fEmail.focus({ preventScroll: true }); return; }
     if (!validEmail(em)) { fgMsg.dataset.k = "bad"; fgMsg.textContent = "Isi email yang formatnya benar."; return; }
     btn.disabled = true; fgMsg.dataset.k = ""; fgMsg.textContent = "Mengirim…";
     try { await api.recover(em); fgMsg.dataset.k = "ok"; fgMsg.textContent = "Jika email itu terdaftar, tautan reset sudah dikirim. Cek kotak masuk dan folder spam.";
@@ -159,7 +175,7 @@ export function authPage() {
   setActs({
     eye: (el) => eye(el),
     flip: () => setSide(!flipUp),
-    terms: (_el, e) => { e?.preventDefault?.(); ask(TERMS, { title: "Ketentuan & Privasi", ok: "Mengerti", cancel: "Tutup" }); },
+    terms: (_el, e) => { e?.preventDefault?.(); ask("", { title: "Ketentuan & Privasi", html: TERMS, ok: "Mengerti", cancel: "" }); },
     forgot: () => setFg(true),
     fgback: () => setFg(false),
   });
@@ -170,6 +186,13 @@ export function authPage() {
     const up = form.dataset.up === "1", f = new FormData(form), btn = form.querySelector("button[type=submit]"), err = form.querySelector(".err");
     const email = String(f.get("email") || "").trim(), pw = String(f.get("pw") || ""), fail = (m, el) => { err.textContent = m; el?.focus({ preventScroll: true }); };
     err.textContent = "";
+    $$(".inv", form).forEach((x) => x.classList.remove("inv"));
+    // kolom kosong dicek lebih dulu, urut dari atas
+    const empty = up ? [["username", "Username"], ["email", "Email"], ["pw", "Password"]] : [["email", "Username atau email"], ["pw", "Password"]];
+    for (const [n, label] of empty) {
+      const el = form.elements[n];
+      if (!String(el.value || "").trim()) { el.classList.add("inv"); return fail(`${label} tidak boleh kosong.`, el); }
+    }
     const byName = !up && !email.includes("@");
     if (!byName && !validEmail(email)) { if (up) checkMail(true); return fail("Format email belum benar. Contoh: nama@email.com", form.elements.email); }
     if (byName && !USER_RE.test(email.toLowerCase())) return fail("Username/email atau password salah.", form.elements.email);
@@ -179,7 +202,10 @@ export function authPage() {
       username = String(f.get("username") || "").trim().toLowerCase();
       if (!USER_RE.test(username)) return fail("Username belum benar: 3–20 karakter, huruf kecil/angka/titik/garis bawah, diawali huruf.", form.elements.username);
       if (uOk === false) return fail("Username sudah dipakai atau tidak valid.", form.elements.username);
-      if (!f.get("agree")) return fail("Centang persetujuan ketentuan dulu.");
+      if (!f.get("agree")) {
+        const ag = form.querySelector(".agree"); ag.classList.remove("inv", "shake"); void ag.offsetWidth; ag.classList.add("inv", "shake");
+        return fail("Centang persetujuan Ketentuan & Privasi terlebih dahulu.");
+      }
     }
     btn.disabled = true;
     try {
