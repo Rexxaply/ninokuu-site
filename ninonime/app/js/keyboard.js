@@ -89,9 +89,9 @@ export function initKeyboard() {
   };
   const check = () => {
     const v = visible();
-    if (v && !shown) { shown = true; if (typingEl()) { document.body.classList.add("kb-typing"); setTimeout(lift, 60); } }
+    if (v && !shown) { shown = true; if (typingEl()) { document.body.classList.add("kb-typing"); lift(); } }
     else if (!v && shown) { shown = false; settle(); }
-    else if (v && typingEl()) setTimeout(lift, 60);
+    else if (v && typingEl()) lift();
     if (!v && !typingEl()) kbBase = Math.max(kbBase, innerHeight);
   };
   const mark = () => { clearTimeout(t); t = setTimeout(() => {
@@ -103,6 +103,9 @@ export function initKeyboard() {
   addEventListener("focusin", mark); addEventListener("focusout", mark);
   // sentuh ulang kolom yang masih fokus setelah keyboard ditutup: keyboard muncul lagi → naik lagi
   addEventListener("pointerup", (e) => { if (e.target === typingEl()) { document.body.classList.add("kb-typing"); setTimeout(() => (visible() ? lift() : 0), 450); } });
-  window.visualViewport?.addEventListener("resize", () => setTimeout(check, 60));
-  addEventListener("resize", () => setTimeout(check, 60));
+  // tunggu ukuran layar tenang dulu (keyboard selesai bergerak) sebelum menggulir: menggulir di tengah animasi
+  // keyboard membuat Chrome menutupnya lagi
+  let ct = 0; const later = () => { clearTimeout(ct); ct = setTimeout(check, 220); };
+  window.visualViewport?.addEventListener("resize", later);
+  addEventListener("resize", later);
 }
