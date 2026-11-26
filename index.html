@@ -27,7 +27,7 @@
     box-shadow: 0 10px 28px rgba(224, 36, 43, .35); transition: transform .15s, opacity .2s; -webkit-tap-highlight-color: transparent; }
   .btn:active { transform: scale(.98); }
   .btn.busy { opacity: .6; pointer-events: none; }
-  .meta { margin-top: 12px; min-height: 18px; color: var(--mu); font-size: 12.5px; }
+  .meta { margin-top: 0; min-height: 18px; text-align: center; color: var(--mu); font-size: 12.5px; }
   .agree { margin: 10px 0 0; color: var(--mu); font-size: 12px; line-height: 1.55; }
   .agree a, footer a { color: var(--tx); font-weight: 700; text-decoration: none; }
   .guide { margin-top: 30px; width: 100%; padding: 18px 16px 6px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line); text-align: left; }
@@ -55,6 +55,7 @@
       <img class="icon" src="icon.png" alt="Ikon aplikasi Ninokuu" width="96" height="96">
       <h1>Ninokuu</h1>
       <p class="sub">Manga, manhwa &amp; manhua</p>
+      <div class="meta" id="meta">&nbsp;</div>
       <a class="btn" id="dl" href="https://github.com/Rexxaply/NinoKuu-Manga/releases/download/apk-terbaru/ninokuu.apk" rel="noopener">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
         <span id="dlt">Unduh</span>
@@ -64,15 +65,15 @@
       <img class="icon" src="ninonime/app/icons/icon-192.png" alt="Ikon aplikasi NinoNime" width="96" height="96">
       <h1>NinoNime</h1>
       <p class="sub">Aplikasi Nonton Anime</p>
+      <div class="meta">Proses pengembangan</div>
       <span class="btn soon" aria-disabled="true">Coming Soon</span>
     </div>
   </div>
-  <div class="meta" id="meta">Android 6 ke atas · gratis</div>
   <p class="agree">Dengan mengunduh dan memasang Ninokuu, kamu menyetujui <a href="syarat/">Syarat &amp; Ketentuan</a>.</p>
   <section class="guide" aria-labelledby="cara">
     <h2 id="cara">Cara memasang</h2>
     <ol>
-      <li><b>Ketuk "Unduh untuk Android"</b> dan tunggu sampai unduhan selesai. Cukup sekali ketuk.</li>
+      <li><b>Ketuk "Unduh" di bawah Ninokuu</b> dan tunggu sampai unduhan selesai. Cukup sekali ketuk.</li>
       <li><b>Buka file ninokuu.apk</b> dari notifikasi unduhan atau folder <i>Download</i>.</li>
       <li>Bila muncul peringatan, <b>izinkan "Instal aplikasi tidak dikenal"</b> untuk browser yang kamu pakai. Ninokuu belum ada di Play Store, jadi Android menanyakan ini lebih dulu.</li>
       <li>Bila Play Protect bertanya, pilih <b>"Detail lainnya" → "Tetap instal"</b>.</li>
@@ -96,7 +97,7 @@
       const v = (String(j.name || "").match(/v(\d+\.\d+\.\d+)/) || [])[1];
       const a = (j.assets || []).find((x) => /\.apk$/i.test(x.name));
       const mb = a ? (a.size / 1048576).toFixed(1).replace(".", ",") + " MB" : "";
-      document.getElementById("meta").textContent = [v && "Versi " + v, mb, "Android 6 ke atas"].filter(Boolean).join(" · ");
+      document.getElementById("meta").textContent = [v && "Versi " + v, mb].filter(Boolean).join(" · ");
     }).catch(() => {});
 </script>
 </body>
