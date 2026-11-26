@@ -74,7 +74,20 @@ export async function signUp(email, password, username = "") {
   if (r?.access_token) { setSession(r); return { session }; }
   return { confirm: true };   // "Confirm email" aktif di Supabase: tunggu konfirmasi
 }
+// ganti password / email akun yang sedang masuk (berlaku juga untuk Ninokuu: akunnya satu)
+export async function updateUser(attrs) { const t = await accessToken(); if (!t) throw new ApiError("Masuk dulu."); const u = await authCall("/user", attrs, { method: "PUT", token: t }); if (u?.id && session) setSession({ ...session, user: u }); return u; }
 export async function signOut() { const t = session?.access_token; setSession(null); if (t) authCall("/logout", null, { token: t }).catch(() => {}); }
+
+/* ---------- tabel (REST) — dipakai untuk membaca profil Ninokuu (satu proyek Supabase) ---------- */
+export async function rest(path) {
+  if (!configured) throw new ApiError("Aplikasi belum tersambung ke server (isi config.js).");
+  const t = (await accessToken()) || KEY;
+  let r;
+  try { r = await fetch(BASE + "/rest/v1/" + path, { headers: { apikey: KEY, Authorization: "Bearer " + t } }); } catch { throw new ApiError(NET_MSG); }
+  if (!r.ok) throw await readErr(r);
+  return r.json();
+}
+export const publicUrl = (bucket, path) => `${BASE}/storage/v1/object/public/${bucket}/${String(path).split("/").map(encodeURIComponent).join("/")}`;
 
 /* ---------- RPC (fungsi SQL di supabase/schema.sql) ---------- */
 export async function rpc(fn, args = {}) {

@@ -6,7 +6,7 @@ import { redeemKeypass, fmtKeypass } from "./access.js";
 import { view, go, setActs, rerender } from "./shell.js";
 import { authPage } from "./auth.js";
 
-export const OPEN = new Set(["akun"]);
+export const OPEN = new Set(["akun", "p"]);
 
 // Beranda (dan tab lain) untuk akun tanpa keypass: kartu "Masukkan keypass".
 // Tulis 12 karakter → langsung diperiksa; salah → teks validasi; benar → NinoNime terbuka penuh.

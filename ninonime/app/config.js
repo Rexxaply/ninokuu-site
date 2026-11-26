@@ -16,5 +16,7 @@ window.NINONIME_CONFIG = {
   // nomor bot WhatsApp yang membuat keypass (format internasional, tanpa +)
   // Versi demo: semua sampul anime diganti sampul bertanda NinoNime (icons/demo-cover.jpg). false = sampul asli.
   DEMO_COVERS: true,
+  // Versi demo: daftar anime, jadwal, dan detail memakai data contoh (js/demo.js), tanpa internet. false = data asli MyAnimeList.
+  DEMO_DATA: true,
   WA_BOT: "6285190814446",
 };

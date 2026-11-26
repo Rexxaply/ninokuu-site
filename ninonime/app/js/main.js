@@ -10,12 +10,13 @@ import { view, go, goReplace, setActs, setRender, topbar, loading } from "./shel
 import { TABS, setActiveTab } from "./navbar.js";
 import { gate, OPEN } from "./gate.js";
 import { vAkun } from "./akun.js";
+import { vPage } from "./pages.js";
 
 /* ---------- router ---------- */
-// #/home  #/jadwal  #/cari  #/favorit  #/akun  #/anime/<id>  #/admin
+// #/home  #/jadwal  #/cari  #/favorit  #/akun  #/anime/<id>  #/admin  #/p/<halaman> (turunan Akun)
 let route = { name: "home", params: [] }, prevName = "home", cleanup = null, navDepth = 0;
 const scrollMem = new Map();
-const DEPTH = { home: 0, jadwal: 0, cari: 0, favorit: 0, akun: 0, anime: 1, admin: 1 };
+const DEPTH = { home: 0, jadwal: 0, cari: 0, favorit: 0, akun: 0, anime: 1, admin: 1, p: 1 };
 const parse = () => { const p = (location.hash.replace(/^#\/?/, "").split("?")[0] || "home").split("/").map(decodeURIComponent); return { name: p[0], params: p.slice(1) }; };
 const back = (fallback = "#/home") => (navDepth > 0 ? history.back() : goReplace(fallback));
 const ctx = () => ({
@@ -35,6 +36,7 @@ const VIEWS = {
   anime: (id) => AN.vDetail(view, ctx(), id),
   akun: vAkun,
   admin: () => AN.vKeypassAdmin(view, ctx()),
+  p: (name) => vPage(name),
 };
 async function render() {
   if (cleanup) { try { cleanup(); } catch {} cleanup = null; }

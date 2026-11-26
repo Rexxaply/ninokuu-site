@@ -51,6 +51,7 @@ function pick(title, list, cur) {
   });
 }
 export async function vFav(view, x) {
+  const want = api.lsGet("favTab"); if (want) { fv.tab = want; fv.q = ""; api.lsSet("favTab", null); }
   const grid = () => api.lsGet("favView", "grid") === "grid";
   const sortKey = () => (SORTS.some(([k]) => k === api.lsGet("favSort")) ? api.lsGet("favSort") : "added");
   const draw = () => {

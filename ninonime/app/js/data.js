@@ -2,6 +2,7 @@
 import * as api from "./api.js";
 import { $ } from "./ui.js";
 import { JIKAN, JP_DAYS } from "./const.js";
+import { DEMO_API } from "./demo.js";
 
 /* =====================================================================
    Jikan API: antrean (maks ±3 permintaan/detik) + cache
@@ -66,6 +67,9 @@ export const A = {
     return uniq(out);
   },
 };
+// versi demo (config.js → DEMO_DATA): semua data dari js/demo.js, tanpa internet
+if (window.NINONIME_CONFIG?.DEMO_DATA) Object.assign(A, DEMO_API);
+
 
 /* ---------- waktu tayang: JST → WIB (WIB = JST − 2 jam) ---------- */
 // mengembalikan { day: 0..6 (WIB), min: menit sejak 00.00 WIB } atau null
