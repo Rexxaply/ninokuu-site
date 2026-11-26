@@ -76,23 +76,20 @@ export function initKeyboard() {
     if (box.top >= 8 && box.bottom <= innerHeight - 12) return;              // sudah terlihat
     scrollBy({ top: (box.top + box.bottom) / 2 - innerHeight / 2, behavior: "smooth" });
   };
-  // Halaman login dirapatkan (logo mengecil, teks "Masuk dulu…" hilang) begitu kolom DISENTUH, sebelum keyboard
-  // mulai bergerak, dan baru dilepas setelah keyboard benar-benar tertutup. Jadi tata letak tidak berubah di
-  // tengah gerak keyboard (itu yang dulu membuat keyboard naik-turun).
+  // Halaman login dirapatkan selama ada kolom yang fokus (berpindah kolom tidak melepasnya). Keyboard ditutup lewat
+  // tombol kembali sementara kolom masih fokus → setelah layar penuh lagi selama 0,6 dtk, kolom dilepas (blur)
+  // seperti aplikasi asli; kedipan keyboard saat pindah kolom (lebih singkat dari itu) diabaikan.
   const B = document.body;
   const compact = (on) => B.classList.toggle("kb-compact", on);
-  let rt = 0, small = false;
+  let rt = 0, ht = 0, wasSmall = false;
   addEventListener("resize", () => {
     if (!typingEl() && innerHeight > kbBase) kbBase = innerHeight;
-    clearTimeout(rt); rt = setTimeout(() => {                                // tunggu layar berhenti berubah
-      const isSmall = innerHeight < kbBase - 80;
-      if (small && !isSmall) compact(false);                                 // keyboard ditutup (kolom masih fokus)
-      small = isSmall;
-      center();
-    }, 150);
+    const small = innerHeight < kbBase - 80;
+    clearTimeout(ht);
+    if (wasSmall && !small && typingEl()) ht = setTimeout(() => { const a = typingEl(); if (a && innerHeight >= kbBase - 80) a.blur(); }, 600);
+    wasSmall = small;
+    clearTimeout(rt); rt = setTimeout(center, 160);                          // tunggu layar berhenti berubah
   });
-  addEventListener("focusin", () => { if (!typingEl()) return; B.classList.add("kb-typing"); compact(true); setTimeout(center, 350); });
+  addEventListener("focusin", () => { if (!typingEl()) return; clearTimeout(ht); B.classList.add("kb-typing"); compact(true); setTimeout(center, 420); });
   addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) { B.classList.remove("kb-typing"); compact(false); } }, 200));
-  // sentuh lagi kolom yang masih fokus setelah keyboard ditutup → keyboard muncul lagi, halaman dirapatkan lagi
-  addEventListener("pointerdown", (e) => { if (e.target === typingEl()) compact(true); });
 }

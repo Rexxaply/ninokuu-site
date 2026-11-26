@@ -25,7 +25,7 @@
 .fv-chips button[aria-pressed="true"] b { background: rgba(255, 255, 255, .25); }
 
 /* Halaman masuk/daftar: kartu berbalik 3D (digerakkan pegas dari JS) */
-.auth-page { display: flex; flex-direction: column; align-items: center; padding: 28px 16px 0; transition: padding-top .3s cubic-bezier(.23, 1, .32, 1); }
+.auth-page { display: flex; flex-direction: column; align-items: center; padding: 28px 16px 0; }
 .auth-page .ct { text-align: center; margin: 10px 0 18px; }
 .flip { width: 100%; max-width: 420px; perspective: 1200px; position: relative; }
 .flip-in { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
@@ -80,11 +80,6 @@
 .pane::after, .auth-face.back .fc::after { content: ""; height: var(--ah, 108px); flex: none; }
 
 /* keyboard terbuka: bagian atas halaman login dirapatkan agar kartu muat */
-.auth-page .gate-logo, .auth-page .ct { transition: width .3s cubic-bezier(.23, 1, .32, 1), margin .3s, opacity .25s, max-height .3s; }
-.auth-page .ct { max-height: 40px; }
-body.kb-native.kb-open .auth-page, body.kb-compact .auth-page { padding-top: 10px; }
-body.kb-native.kb-open .auth-page .gate-logo, body.kb-compact .auth-page .gate-logo { width: 150px; margin-bottom: 0; }
-body.kb-native.kb-open .auth-page .ct, body.kb-compact .auth-page .ct { opacity: 0; max-height: 0; margin: 4px 0 8px; overflow: hidden; }
 
 /* ---------- kartu keypass di Beranda ---------- */
 .kg { display: flex; flex-direction: column; align-items: center; padding: 34px 16px 0; }
@@ -122,3 +117,13 @@ body.kb-native.kb-open .auth-page .ct, body.kb-compact .auth-page .ct { opacity:
 .flip.flat .auth-face { backface-visibility: visible; -webkit-backface-visibility: visible; }
 .flip.flat .auth-face.back { transform: none; }
 .flip.flat .auth-face[aria-hidden="true"] { visibility: hidden; }
+/* mengetik: halaman login dirapatkan HANYA dengan transform (tanpa mengubah tata letak) → mulus, dan tidak
+   memicu ubah-ukuran yang membuat keyboard naik-turun. Logo mengecil, teks "Masuk dulu…" memudar, kartu naik. */
+.auth-page .gate-logo { transform-origin: 50% 0; transition: scale .38s cubic-bezier(.23, 1, .32, 1), translate .38s cubic-bezier(.23, 1, .32, 1); }
+.auth-page .ct { transition: opacity .2s ease, translate .38s cubic-bezier(.23, 1, .32, 1); }
+.auth-page .flip, .auth-page .forgot { transition: translate .38s cubic-bezier(.23, 1, .32, 1), opacity .25s, transform .35s cubic-bezier(.23, 1, .32, 1); }
+body.kb-compact .auth-page .gate-logo, body.kb-native.kb-open .auth-page .gate-logo { scale: .72; translate: 0 -14px; }
+body.kb-compact .auth-page .ct, body.kb-native.kb-open .auth-page .ct { opacity: 0; translate: 0 -24px; pointer-events: none; }
+body.kb-compact .auth-page .flip, body.kb-compact .auth-page .forgot,
+body.kb-native.kb-open .auth-page .flip, body.kb-native.kb-open .auth-page .forgot { translate: 0 -62px; }
+@media (prefers-reduced-motion: reduce) { .auth-page .gate-logo, .auth-page .ct, .auth-page .flip, .auth-page .forgot { transition: opacity .2s; } }
