@@ -117,3 +117,8 @@ body.kb-native.kb-open .auth-page .ct { opacity: 0; max-height: 0; margin: 4px 0
 .auth-face .fe:empty { display: none; }
 .auth-face .agree + .fe { margin: -4px 0 0 30px; }
 @keyframes feIn { from { opacity: 0; transform: translateY(-3px); } }
+/* kartu diam: datar (tanpa 3D), sisi yang tidak tampil disembunyikan */
+.flip.flat .flip-in { transform: none; transform-style: flat; will-change: auto; }
+.flip.flat .auth-face { backface-visibility: visible; -webkit-backface-visibility: visible; }
+.flip.flat .auth-face.back { transform: none; }
+.flip.flat .auth-face[aria-hidden="true"] { visibility: hidden; }

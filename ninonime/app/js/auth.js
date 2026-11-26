@@ -88,7 +88,11 @@ export function authPage() {
   const draw = () => {
     if (hF && hB) flip.style.height = hF + (hB - hF) * Math.min(1, Math.abs(ang) / 180) + "px";
     const dip = Math.sin(Math.min(1, Math.abs(ang) / 180) * Math.PI);          // 0 di ujung, 1 di tengah balikan
-    inner.style.transform = `translateZ(${-70 * dip}px) rotateY(${ang}deg) scale(${1 - 0.035 * dip})`;
+    // diam di salah satu sisi → kartu "datar" tanpa transformasi 3D: kolom isian di dalam bidang 3D membuat
+    // keyboard Chrome Android tidak mau tampil/menggulir dengan benar. 3D hanya dipakai selama kartu berbalik.
+    const rest = vel === 0 && ang === tgt && (ang === 0 || ang === -180);
+    flip.classList.toggle("flat", rest);
+    inner.style.transform = rest ? "" : `translateZ(${-70 * dip}px) rotateY(${ang}deg) scale(${1 - 0.035 * dip})`;
     gloss.style.opacity = String(dip * 0.55);
     flip.style.setProperty("--lift", String(dip));
   };
@@ -99,7 +103,7 @@ export function authPage() {
     if (Math.abs(ang - tgt) < 0.04 && Math.abs(vel) < 0.6) { ang = tgt; vel = 0; draw(); raf = 0; return; }
     raf = requestAnimationFrame(step);
   };
-  const go2 = (up) => { tgt = up ? -180 : 0; if (reduce) { ang = tgt; vel = 0; draw(); return; } if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); } };
+  const go2 = (up) => { tgt = up ? -180 : 0; draw(); if (reduce) { ang = tgt; vel = 0; draw(); return; } if (!raf) { last = performance.now(); raf = requestAnimationFrame(step); } };
   draw();
 
   /* tinggi alami tiap sisi (isi + padding + border); kartu berubah tinggi bersama sudut balikan */
