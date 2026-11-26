@@ -2,31 +2,84 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NinoNime · Jadwal & info anime</title>
+<meta name="description" content="Unduh aplikasi Android NinoNime untuk melihat jadwal dan info anime.">
 <meta name="theme-color" content="#0B1018">
-<meta name="description" content="NinoNime — jadwal, info, dan tontonan anime">
-<!-- Tambahkan domain sumber videomu di frame-src / media-src / connect-src bila perlu -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://api.jikan.moe; frame-src https://www.youtube-nocookie.com https://www.youtube.com; media-src 'self' https: blob:; worker-src 'self'; base-uri 'self'; object-src 'none'">
-<meta name="referrer" content="no-referrer">
-<title>NinoNime</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/anime.css">
-<link rel="stylesheet" href="css/app.css">
-<script src="config.js"></script>
+<meta property="og:title" content="NinoNime">
+<meta property="og:description" content="Unduh aplikasi Android NinoNime untuk melihat jadwal dan info anime.">
+<meta property="og:image" content="https://ninokuu.site/ninonime/app/icons/icon-512.png">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com">
+<link rel="icon" href="app/icons/icon-192.png">
+<style>
+  :root { --bg: #0B1018; --s1: #141B27; --line: #273244; --tx: #F2F4F8; --mu: #A3ACBD; --red: #E0242B; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--tx);
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100svh; display: flex; align-items: center; justify-content: center; padding: 32px 20px calc(32px + env(safe-area-inset-bottom));
+    background: radial-gradient(90% 55% at 50% 0%, rgba(224, 36, 43, .22), transparent 70%), var(--bg); }
+  main { width: 100%; max-width: 380px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .icon { width: 112px; height: 112px; border-radius: 28px; box-shadow: 0 18px 44px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .06); }
+  h1 { margin: 20px 0 6px; font-size: 28px; font-weight: 800; letter-spacing: -.01em; }
+  .sub { margin: 0; color: var(--mu); font-size: 14.5px; line-height: 1.55; }
+  .btn { margin-top: 28px; width: 100%; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    border-radius: 18px; background: var(--red); color: #fff; font-size: 16px; font-weight: 800; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(224, 36, 43, .35); transition: transform .15s, opacity .2s; -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(.98); }
+  .btn.busy { opacity: .6; pointer-events: none; }
+  .meta { margin-top: 12px; min-height: 18px; color: var(--mu); font-size: 12.5px; }
+  .agree { margin: 10px 0 0; color: var(--mu); font-size: 12px; line-height: 1.55; }
+  .agree a, footer a { color: var(--tx); font-weight: 700; text-decoration: none; }
+  .guide { margin-top: 30px; width: 100%; padding: 18px 16px 6px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line); text-align: left; }
+  .guide h2 { margin: 0 0 12px; font-size: 15px; font-weight: 800; }
+  .guide ol { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  .guide li { counter-increment: s; position: relative; padding: 0 0 14px 38px; color: var(--mu); font-size: 13px; line-height: 1.6; }
+  .guide li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; background: rgba(224, 36, 43, .16); color: #FF6B70; font-size: 12.5px; font-weight: 800; }
+  .guide li b { color: var(--tx); }
+  footer { margin-top: 28px; color: #5F6878; font-size: 11.5px; }
+</style>
 </head>
-<body data-mode="anime">
-<main id="view" class="in" aria-live="polite"></main>
-<nav id="nav" aria-label="Menu utama" style="--tabs:5">
-  <span class="nav-bg" aria-hidden="true"></span>
-  <span class="nav-ind" aria-hidden="true"></span>
-</nav>
-<div id="toast" role="status"></div>
-<script type="module" src="js/main.js"></script>
+<body>
+<main>
+  <img class="icon" src="app/icons/icon-192.png" alt="Ikon aplikasi NinoNime" width="112" height="112">
+  <h1>NinoNime</h1>
+  <p class="sub">Jadwal &amp; info anime di Android.</p>
+  <a class="btn" id="dl" href="https://github.com/Rexxaply/NinoNime/releases/download/apk-terbaru/ninonime.apk" rel="noopener">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+    <span id="dlt">Unduh untuk Android</span>
+  </a>
+  <div class="meta" id="meta">Android 6 ke atas · gratis</div>
+  <p class="agree">Dengan mengunduh dan memasang NinoNime, kamu menyetujui <a href="../syarat/">Syarat &amp; Ketentuan</a>.</p>
+  <section class="guide" aria-labelledby="cara">
+    <h2 id="cara">Cara memasang</h2>
+    <ol>
+      <li><b>Ketuk "Unduh untuk Android"</b> dan tunggu sampai unduhan selesai. Cukup sekali ketuk.</li>
+      <li><b>Buka file ninonime.apk</b> dari notifikasi unduhan atau folder <i>Download</i>.</li>
+      <li>Bila muncul peringatan, <b>izinkan "Instal aplikasi tidak dikenal"</b> untuk browser yang kamu pakai. NinoNime belum ada di Play Store, jadi Android menanyakan ini lebih dulu.</li>
+      <li>Bila Play Protect bertanya, pilih <b>"Detail lainnya" → "Tetap instal"</b>.</li>
+      <li><b>Ketuk Instal</b>, lalu buka NinoNime. Untuk versi baru, pasang saja di atas versi lama: akunmu tetap aman.</li>
+    </ol>
+  </section>
+  <footer><a href="../syarat/">Syarat &amp; Ketentuan</a> · © NinoNime</footer>
+</main>
+<script>
+  // satu ketukan = satu unduhan: tombol dikunci sebentar supaya tidak memicu unduhan berulang
+  const btn = document.getElementById("dl"), txt = document.getElementById("dlt");
+  btn.addEventListener("click", (e) => {
+    if (btn.classList.contains("busy")) { e.preventDefault(); return; }
+    btn.classList.add("busy"); txt.textContent = "Unduhan dimulai…";
+    setTimeout(() => { btn.classList.remove("busy"); txt.textContent = "Unduh lagi"; }, 8000);
+  });
+  // versi & ukuran terbaru dari rilis GitHub (tanpa ini halaman tetap berfungsi)
+  fetch("https://api.github.com/repos/Rexxaply/NinoNime/releases/tags/apk-terbaru", { headers: { Accept: "application/vnd.github+json" } })
+    .then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (!j) return;
+      const v = (String(j.name || "").match(/v(\d+\.\d+\.\d+)/) || [])[1];
+      const a = (j.assets || []).find((x) => /\.apk$/i.test(x.name));
+      const mb = a ? (a.size / 1048576).toFixed(1).replace(".", ",") + " MB" : "";
+      document.getElementById("meta").textContent = [v && "Versi " + v, mb, "Android 6 ke atas"].filter(Boolean).join(" · ");
+    }).catch(() => {});
+</script>
 </body>
 </html>

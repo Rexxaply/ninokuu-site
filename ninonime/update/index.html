@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pembaruan NinoNime</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B1018">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://api.github.com">
+<link rel="icon" href="../app/icons/icon-192.png">
+<style>
+  :root { --bg: #0B1018; --s1: #141B27; --line: #273244; --tx: #F2F4F8; --mu: #A3ACBD; --soft: #C9D0DC; --red: #E0242B; --ok: #5DD39E; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--tx);
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100svh; display: flex; justify-content: center; padding: 36px 20px calc(32px + env(safe-area-inset-bottom));
+    background: radial-gradient(90% 45% at 50% 0%, rgba(224, 36, 43, .22), transparent 70%), var(--bg); }
+  main { width: 100%; max-width: 400px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .icon-wrap { position: relative; }
+  .icon { width: 96px; height: 96px; border-radius: 24px; box-shadow: 0 18px 44px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .06); }
+  .badge { position: absolute; right: -10px; bottom: -10px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--red); color: #fff; border: 4px solid var(--bg); }
+  .tag { margin-top: 22px; padding: 5px 12px; border-radius: 999px; background: rgba(224, 36, 43, .16); color: #FF8A8E; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  h1 { margin: 12px 0 6px; font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+  .sub { margin: 0; color: var(--mu); font-size: 14px; line-height: 1.55; }
+  .btn { margin-top: 24px; width: 100%; min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    border-radius: 18px; background: var(--red); color: #fff; font-size: 16px; font-weight: 800; text-decoration: none;
+    box-shadow: 0 10px 28px rgba(224, 36, 43, .35); transition: transform .15s, opacity .2s; -webkit-tap-highlight-color: transparent; }
+  .btn:active { transform: scale(.98); }
+  .btn.busy { opacity: .6; pointer-events: none; }
+  .btn2 { margin-top: 10px; width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 8px;
+    border-radius: 16px; border: 1px solid var(--line); background: var(--s1); color: var(--tx); font-size: 14.5px; font-weight: 700; text-decoration: none; }
+  .meta { margin-top: 10px; color: var(--mu); font-size: 12.5px; min-height: 18px; }
+  .card { margin-top: 22px; width: 100%; padding: 16px 16px 6px; border-radius: 18px; background: var(--s1); border: 1px solid var(--line); text-align: left; }
+  .card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 800; }
+  .notes { margin: 0 0 10px; padding-left: 18px; color: var(--soft); font-size: 13.5px; line-height: 1.6; }
+  .notes li { margin: 3px 0; }
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  ol.steps li { counter-increment: s; position: relative; padding: 0 0 12px 36px; color: var(--mu); font-size: 13px; line-height: 1.6; }
+  ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 25px; height: 25px; border-radius: 50%;
+    display: grid; place-items: center; background: rgba(224, 36, 43, .16); color: #FF6B70; font-size: 12px; font-weight: 800; }
+  ol.steps b { color: var(--tx); }
+  .safe { margin: 0 0 12px; padding: 10px 12px; border-radius: 12px; background: rgba(93, 211, 158, .1); color: #9BE6C4; font-size: 12.5px; line-height: 1.5; }
+  footer { margin-top: 26px; color: #5F6878; font-size: 11.5px; }
+  footer a { color: var(--soft); text-decoration: none; font-weight: 700; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="icon-wrap">
+    <img class="icon" src="../app/icons/icon-192.png" alt="NinoNime" width="96" height="96">
+    <span class="badge" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></span>
+  </div>
+  <span class="tag">Pembaruan tersedia</span>
+  <h1 id="ver">NinoNime versi terbaru</h1>
+  <p class="sub" id="sub">Pasang di atas versi lama. Akunmu tetap aman.</p>
+
+  <a class="btn" id="dl" href="https://github.com/Rexxaply/NinoNime/releases/download/apk-terbaru/ninonime.apk" rel="noopener">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+    <span id="dlt">Unduh pembaruan</span>
+  </a>
+  <div class="meta" id="meta"></div>
+
+  <section class="card" id="newCard" hidden>
+    <h2>Yang baru</h2>
+    <ul class="notes" id="notes"></ul>
+  </section>
+
+  <section class="card">
+    <h2>Cara memasang pembaruan</h2>
+    <ol class="steps">
+      <li><b>Ketuk "Unduh pembaruan"</b> sekali, lalu tunggu sampai unduhan selesai.</li>
+      <li><b>Buka file ninonime.apk</b> dari notifikasi unduhan atau folder <i>Download</i>.</li>
+      <li>Ketuk <b>"Perbarui"</b> (atau "Instal"). Bila Play Protect bertanya, pilih <b>"Detail lainnya" → "Tetap instal"</b>.</li>
+    </ol>
+    <p class="safe">Pembaruan menimpa versi lama, tidak perlu menghapus aplikasinya. Datamu tidak hilang.</p>
+  </section>
+
+  <a class="btn2" href="../app/">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+    Sudah terpasang? Buka NinoNime
+  </a>
+  <footer><a href="../../syarat/">Syarat &amp; Ketentuan</a> · © NinoNime</footer>
+</main>
+<script>
+  // satu ketukan = satu unduhan
+  const btn = document.getElementById("dl"), txt = document.getElementById("dlt");
+  btn.addEventListener("click", (e) => {
+    if (btn.classList.contains("busy")) { e.preventDefault(); return; }
+    btn.classList.add("busy"); txt.textContent = "Unduhan dimulai…";
+    setTimeout(() => { btn.classList.remove("busy"); txt.textContent = "Unduh lagi"; }, 8000);
+  });
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  // versi, ukuran, dan catatan rilis dari GitHub (halaman tetap berfungsi tanpa ini)
+  fetch("https://api.github.com/repos/Rexxaply/NinoNime/releases/tags/apk-terbaru", { headers: { Accept: "application/vnd.github+json" } })
+    .then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (!j) return;
+      const v = (String(j.name || "").match(/v(\d+\.\d+\.\d+)/) || [])[1];
+      if (v) document.getElementById("ver").textContent = "NinoNime v" + v;
+      const a = (j.assets || []).find((x) => /\.apk$/i.test(x.name));
+      const mb = a ? (a.size / 1048576).toFixed(1).replace(".", ",") + " MB" : "";
+      const tgl = j.published_at ? new Date(j.published_at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "";
+      document.getElementById("meta").textContent = [mb, tgl && "dirilis " + tgl].filter(Boolean).join(" · ");
+      // catatan: baris pertama pesan rilis "vX.Y.Z: a, b (c), d" → dipecah jadi poin
+      const lines = String(j.body || "").split(/\r?\n/).map((x) => x.trim())
+        .filter((x) => x && !/^(Co-Authored-By|Claude-Session|Dibangun otomatis|Unduh |Pembaruan bisa)/i.test(x));
+      const pts = [];
+      for (const l of lines.slice(0, 6)) {
+        const body = l.replace(/^v\d+\.\d+\.\d+\s*[:\-–]\s*/i, "").replace(/^[-•*]\s*/, "");
+        // pecah di koma yang tidak berada di dalam kurung
+        let depth = 0, cur = "";
+        for (const ch of body) { if (ch === "(") depth++; if (ch === ")") depth--; if (ch === "," && depth === 0) { pts.push(cur); cur = ""; } else cur += ch; }
+        pts.push(cur);
+      }
+      const clean = pts.map((x) => x.trim()).filter(Boolean).slice(0, 10).map((x) => x[0].toUpperCase() + x.slice(1));
+      if (clean.length) { document.getElementById("notes").innerHTML = clean.map((x) => "<li>" + esc(x) + "</li>").join(""); document.getElementById("newCard").hidden = false; }
+    }).catch(() => {});
+</script>
+</body>
+</html>

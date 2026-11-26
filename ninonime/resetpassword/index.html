@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0B1018">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://ocersqyrztzegwzjvvoh.supabase.co; form-action 'none'; base-uri 'none'">
-<link rel="icon" href="../icons/icon-192.png">
+<link rel="icon" href="../app/icons/icon-192.png">
 <style>
   :root { --bg: #0B1018; --s1: #141B27; --line: #273244; --tx: #F2F4F8; --mu: #A3ACBD; --red: #E0242B; --ok: #5DD39E; }
   * { box-sizing: border-box; }
@@ -46,7 +46,7 @@
 <body>
 <main>
   <div class="icon-wrap">
-    <img class="icon" src="../icons/icon-192.png" alt="NinoNime" width="96" height="96">
+    <img class="icon" src="../app/icons/icon-192.png" alt="NinoNime" width="96" height="96">
     <span class="badge" id="badge" aria-hidden="true" hidden></span>
   </div>
   <h1 id="ttl">Buat password baru</h1>
@@ -58,7 +58,7 @@
     <span class="err-t" id="e" role="alert"></span>
     <button class="btn" id="save" type="submit" style="margin-top:4px">Simpan password</button>
   </form>
-  <a class="btn" id="open" href="../#/akun" hidden>
+  <a class="btn" id="open" href="../app/#/akun" hidden>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
     <span>Kembali ke NinoNime</span>
   </a>
@@ -85,7 +85,7 @@
     done(false, expired ? "Tautan sudah tidak berlaku" : "Tautan bermasalah",
       expired ? "Tautan reset password ini sudah kedaluwarsa atau sudah pernah dipakai. Minta tautan baru dari aplikasi: halaman masuk → Lupa password?"
         : "Terjadi masalah: " + String(err).replace(/\+/g, " "));
-    $("open").href = "../#/akun";
+    $("open").href = "../app/#/akun";
   } else {
     $("f").hidden = false;
     $("pw").focus();
