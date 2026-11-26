@@ -65,7 +65,7 @@ export function authPage() {
         <button class="btn ghost" type="button" data-act="fgback">Kembali ke Masuk</button></div></div></div></form>`;
   const back = `<form class="auth-face back" data-up="1" novalidate><div class="fc">
       <b class="b17">Daftar akun NinoNime</b>
-      <label>Username<input name="username" id="su-user" required autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="contoh: nino_fan"><span class="hint" data-for="username" aria-live="polite"></span></label>
+      <label>Username<input name="username" id="su-user" required autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="20" placeholder="contoh: nino_fan"><span class="hint" data-for="username" aria-live="polite"></span></label>
       <label>Email<input name="remail" id="su-email" type="email" required autocomplete="email" inputmode="email" placeholder="nama@email.com"><span class="hint" data-for="email" aria-live="polite"></span></label>
       ${pwField(true)}
       <span class="meter" data-s="0" aria-live="polite"><i></i><i></i><i></i><em>Kekuatan password</em></span>
