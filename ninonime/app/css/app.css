@@ -119,9 +119,9 @@
 .flip.flat .auth-face[aria-hidden="true"] { visibility: hidden; }
 /* mengetik: halaman login dirapatkan HANYA dengan transform (tanpa mengubah tata letak) → mulus, dan tidak
    memicu ubah-ukuran yang membuat keyboard naik-turun. Logo mengecil, teks "Masuk dulu…" memudar, kartu naik. */
-.auth-page .gate-logo { transform-origin: 50% 0; transition: scale .38s cubic-bezier(.23, 1, .32, 1), translate .38s cubic-bezier(.23, 1, .32, 1); }
-.auth-page .ct { transition: opacity .2s ease, translate .38s cubic-bezier(.23, 1, .32, 1); }
-.auth-page .flip, .auth-page .forgot { transition: translate .38s cubic-bezier(.23, 1, .32, 1), opacity .25s, transform .35s cubic-bezier(.23, 1, .32, 1); }
+.auth-page .gate-logo { transform-origin: 50% 0; transition: scale .3s cubic-bezier(.23, 1, .32, 1), translate .3s cubic-bezier(.23, 1, .32, 1); }
+.auth-page .ct { transition: opacity .2s ease, translate .3s cubic-bezier(.23, 1, .32, 1); }
+.auth-page .flip, .auth-page .forgot { transition: translate .3s cubic-bezier(.23, 1, .32, 1), opacity .25s, transform .35s cubic-bezier(.23, 1, .32, 1); }
 body.kb-compact .auth-page .gate-logo, body.kb-native.kb-open .auth-page .gate-logo { scale: .72; translate: 0 -14px; }
 body.kb-compact .auth-page .ct, body.kb-native.kb-open .auth-page .ct { opacity: 0; translate: 0 -24px; pointer-events: none; }
 body.kb-compact .auth-page .flip, body.kb-compact .auth-page .forgot,

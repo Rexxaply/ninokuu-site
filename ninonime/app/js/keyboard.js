@@ -76,20 +76,20 @@ export function initKeyboard() {
     if (box.top >= 8 && box.bottom <= innerHeight - 12) return;              // sudah terlihat
     scrollBy({ top: (box.top + box.bottom) / 2 - innerHeight / 2, behavior: "smooth" });
   };
-  // Halaman login dirapatkan selama ada kolom yang fokus (berpindah kolom tidak melepasnya). Keyboard ditutup lewat
-  // tombol kembali sementara kolom masih fokus → setelah layar penuh lagi selama 0,6 dtk, kolom dilepas (blur)
-  // seperti aplikasi asli; kedipan keyboard saat pindah kolom (lebih singkat dari itu) diabaikan.
+  // Halaman login dirapatkan selama ada kolom yang fokus (berpindah kolom tidak melepasnya). Keyboard ditarik turun
+  // sementara kolom masih fokus → halaman langsung kembali normal begitu layar memanjang, dan kolom dilepas (blur).
+  // Kedipan keyboard sesaat setelah pindah kolom (< 0,45 dtk sejak kolom baru disentuh) diabaikan.
   const B = document.body;
   const compact = (on) => B.classList.toggle("kb-compact", on);
-  let rt = 0, ht = 0, wasSmall = false;
+  let rt = 0, wasSmall = false, lastFocus = 0;
   addEventListener("resize", () => {
     if (!typingEl() && innerHeight > kbBase) kbBase = innerHeight;
-    const small = innerHeight < kbBase - 80;
-    clearTimeout(ht);
-    if (wasSmall && !small && typingEl()) ht = setTimeout(() => { const a = typingEl(); if (a && innerHeight >= kbBase - 80) a.blur(); }, 600);
+    const small = innerHeight < kbBase - 80, a = typingEl();
+    if (a && wasSmall && !small && performance.now() - lastFocus > 450) { compact(false); a.blur(); }
+    else if (a && small) compact(true);
     wasSmall = small;
     clearTimeout(rt); rt = setTimeout(center, 160);                          // tunggu layar berhenti berubah
   });
-  addEventListener("focusin", () => { if (!typingEl()) return; clearTimeout(ht); B.classList.add("kb-typing"); compact(true); setTimeout(center, 420); });
-  addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) { B.classList.remove("kb-typing"); compact(false); } }, 200));
+  addEventListener("focusin", () => { if (!typingEl()) return; lastFocus = performance.now(); B.classList.add("kb-typing"); compact(true); setTimeout(center, 420); });
+  addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) { B.classList.remove("kb-typing"); compact(false); } }, 120));
 }
