@@ -77,14 +77,18 @@ export async function vJadwal(view, x) {
   let raf = 0; const onScroll = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; sync(); }); };
   addEventListener("scroll", onScroll, { passive: true });
 
+  // tanggal yang diketuk: dijaga sampai pengguna menggulir sendiri. Hari yang belum termuat masih berupa kerangka;
+  // saat isinya (atau hari di atasnya) selesai dimuat, posisi diluruskan lagi ke hari ini → tidak terlempar balik.
+  let target = null;
   const goDay = (d, smooth = true) => {
     const s = secs[d]; if (!s) return;
+    target = d;
     const top = scrollY + s.getBoundingClientRect().top - stuck() + 1;
     setActive(d); clearTimeout(lock); lock = setTimeout(() => { lock = 0; sync(); }, smooth ? 700 : 50); quietNav(smooth ? 900 : 300);
     scrollTo({ top: Math.max(0, top), behavior: smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto" });
   };
   const goNow = (smooth = true) => {
-    const n = $(".jd-now", secs[wn.day]);
+    const n = $(".jd-now", secs[wn.day]); target = null;
     if (!n) return goDay(wn.day, smooth);
     setActive(wn.day); clearTimeout(lock); lock = setTimeout(() => { lock = 0; sync(); }, smooth ? 700 : 50); quietNav(smooth ? 900 : 300);
     // SEKARANG di ±42% tinggi layar, tapi paling tidak sampai judul hari ini menempel (supaya tanggal aktif = hari ini)
@@ -96,28 +100,36 @@ export async function vJadwal(view, x) {
   let sx = 0, sy = 0;
   const ts = (e) => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; };
   const te = (e) => { const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) { const n = Math.min(6, Math.max(0, active + (dx < 0 ? 1 : -1))); if (n !== active) goDay(n); } };
+  // pengguna menggulir sendiri (bukan lewat bilah tanggal) → tanggal yang diketuk tidak dijaga lagi
+  const free = (e) => { if (!e.target.closest?.(".jd-days, .jd-today")) target = null; };
+  addEventListener("touchstart", free, { passive: true }); addEventListener("wheel", free, { passive: true });
   wk.addEventListener("touchstart", ts, { passive: true }); wk.addEventListener("touchend", te, { passive: true });
   // penanda SEKARANG & hitung mundur diperbarui tiap menit (hanya hari ini, tanpa menggulir)
   const tick = setInterval(() => { if (document.visibilityState === "visible" && shown() && lists[wn.day]) { const y = scrollY; draw(wn.day, true); scrollTo(0, y); } }, 60e3);
   addEventListener("resize", fitSticky, { passive: true });
-  x.setCleanup(() => { clearInterval(tick); removeEventListener("scroll", onScroll); removeEventListener("resize", fitSticky); cancelAnimationFrame(raf); clearTimeout(lock); });
+  x.setCleanup(() => { clearInterval(tick); removeEventListener("scroll", onScroll); removeEventListener("resize", fitSticky); removeEventListener("touchstart", free); removeEventListener("wheel", free); cancelAnimationFrame(raf); clearTimeout(lock); });
   x.setActs({ day: (el) => goDay(+el.dataset.v), today: () => goNow(), retry: () => vJadwal(view, x) });
 
-  // muat: hari ini dulu (langsung ditampilkan & digulir ke SEKARANG), lalu hari-hari lain berurutan
+  // muat: ketujuh hari diminta SEKALIGUS (dulu berurutan: hari ini dulu, hari-hari sebelumnya paling akhir → tanggal
+  // di atas hari ini belum bisa dipakai sampai semuanya termuat). Tiap hari digambar begitu datanya tiba.
   // kembali dari detail anime: posisi baca terakhir dipulihkan setelah semua hari termuat (tanpa meluncur ke SEKARANG)
   const backY = x.savedY || 0;
   if (!backY) requestAnimationFrame(() => goDay(wn.day, false));
-  const order = [wn.day, ...[1, 2, 3, 4, 5, 6].map((k) => (wn.day + k) % 7)];
   let first = !backY;
-  for (const d of order) {
-    try { lists[d] = await scheduleFor(d); } catch (e) { if (!alive()) return; fail(d, e); continue; }
-    if (!alive()) return;
-    // hari sebelum hari ini yang dimuat → tinggi berubah di atas posisi baca: posisi dijaga supaya tidak melompat
-    const before = d < wn.day && shown() && secs[wn.day].getBoundingClientRect().top;
+  const place = (d) => {
+    // hari di atas posisi baca (hari yang diketuk, atau hari yang sedang terlihat) berubah tinggi → posisi dijaga
+    const anchor = target ?? active, keep = d < anchor && shown();
+    const before = keep ? secs[anchor].getBoundingClientRect().top : 0;
     draw(d);
-    if (before !== false) { quietNav(300); scrollBy(0, secs[wn.day].getBoundingClientRect().top - before); }
-    if (first) { first = false; setTimeout(() => { if (shown()) goNow(false); }, 30); }
+    if (keep) { quietNav(300); scrollBy(0, secs[anchor].getBoundingClientRect().top - before); }
+    if (first && d === wn.day) { first = false; setTimeout(() => { if (shown() && (target == null || target === wn.day)) goNow(false); }, 30); }
+    // hari yang diketuk baru saja termuat: luruskan tepat ke judulnya (luncuran yang terpotong ikut dibereskan)
+    if (target === d && shown()) goDay(d, false);
     sync();
-  }
+  };
+  await Promise.all([0, 1, 2, 3, 4, 5, 6].map((d) => scheduleFor(d).then(
+    (l) => { lists[d] = l; if (alive()) place(d); },
+    (e) => { if (alive()) fail(d, e); })));
+  if (!alive()) return;
   if (backY && shown()) { quietNav(300); scrollTo(0, backY); sync(); }
 }

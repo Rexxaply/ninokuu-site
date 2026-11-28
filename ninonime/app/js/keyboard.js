@@ -76,7 +76,8 @@ export function initKeyboard() {
   const B = document.body;
   const compact = (on) => B.classList.toggle("kb-compact", on);
   // keyboard ditutup (tombol ▽ / kembali) sementara kolom masih fokus → kolom dilepas, halaman kembali normal
-  const closed = () => { const a = typingEl(); compact(false); if (a) a.blur(); };
+  let sawKb = false;
+  const closed = () => { const a = typingEl(); sawKb = false; compact(false); if (a) a.blur(); };
   // Dulu perubahan layar < 0,45 dtk sejak pindah kolom diabaikan begitu saja. Di APK keyboard berkedip saat
   // pindah kolom username ⇄ password, jadi kejadian "layar memanjang" saat keyboard benar-benar ditutup bisa
   // ikut terlewat → halaman tetap rapat & menu bawah tetap tersembunyi. Sekarang keadaan dicek ulang setelah
@@ -84,7 +85,7 @@ export function initKeyboard() {
   let rt = 0, ct = 0, lastFocus = 0;
   const check = () => {
     const a = typingEl(); if (!a) return;
-    if (innerHeight < kbBase - 80) compact(true);
+    if (innerHeight < kbBase - 80) { sawKb = true; compact(true); }
     else if (performance.now() - lastFocus > 700) closed();
     else ct = setTimeout(check, 300);   // baru pindah kolom: keyboard mungkin sedang muncul lagi, cek sebentar lagi
   };
@@ -93,6 +94,22 @@ export function initKeyboard() {
     clearTimeout(ct); ct = setTimeout(check, 220);
     clearTimeout(rt); rt = setTimeout(center, 160);                          // tunggu layar berhenti berubah
   });
+  // Pengaman: isi otomatis (Samsung Pass/Google) menutup keyboard lewat jendela sistem lain; selama jendela itu tampil
+  // aplikasi tidak menerima kejadian ukuran layar/keyboard, jadi halaman bisa tertinggal dalam mode rapat (terpotong).
+  // Selama mode rapat aktif, keadaan dicek berkala: layar sudah penuh lagi > 0,6 dtk → keyboard dianggap tertutup.
+  // (hanya bila keyboard layar memang sempat terlihat: di komputer tanpa keyboard layar kolom tidak dilepas)
+  let fullSince = 0;
+  setInterval(() => {
+    if (!B.classList.contains("kb-compact")) { fullSince = 0; return; }
+    if (!typingEl()) { compact(false); return; }
+    if (innerHeight < kbBase - 80) { fullSince = 0; sawKb = true; return; }
+    if (!sawKb) return;
+    const t = performance.now();
+    if (!fullSince) fullSince = t;
+    else if (t - fullSince > 600 && t - lastFocus > 900) { fullSince = 0; closed(); }
+  }, 300);
+  addEventListener("focus", () => { clearTimeout(ct); ct = setTimeout(check, 300); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { clearTimeout(ct); ct = setTimeout(check, 300); } });
   const K = plugin();
   if (K?.addListener) {
     let hideT = 0;
