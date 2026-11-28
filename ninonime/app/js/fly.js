@@ -31,27 +31,35 @@ document.addEventListener("click", (e) => {
 // sampul yang sedang terbang: tujuan (dan pengganti tujuan bila halaman digambar ulang) disembunyikan sampai mendarat
 let flight = null;
 export function adoptFly(el) { if (!flight || !el || flight.hide.has(el)) return; el.style.visibility = "hidden"; flight.hide.add(el); }
-export function fly(from, toEl, dur = 460) {
+/* Gerak hanya lewat transform (dikerjakan GPU). Dulu kotak bayangan menganimasikan left/top/width/height + bayangan +
+   posisi gambar: tiap frame menghitung ulang tata letak & menggambar ulang → di APK/HP terasa patah-patah, apalagi
+   bersamaan dengan info anime yang sedang digambar.
+   Kotak bayangan berukuran TUJUAN dan diskalakan dari bentuk asal (sx, sy bisa berbeda); gambar di dalamnya diberi
+   skala kebalikan supaya tetap proporsional (tidak gepeng) selama terbang. */
+export function fly(from, toEl, dur = 420) {
   if (!toEl || !from?.r || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   flight?.done(true);
-  const to = shot(toEl), a = from.r, b = to.r; if (!b.width || !a.width) return;
+  const to = shot(toEl), a = from.r, b = to.r; if (!b.width || !a.width || !b.height || !a.height) return;
   const src = to.src || from.src; if (!src) return;
   const g = document.createElement("div"); g.className = "fly";
   const img = document.createElement("img"); img.alt = ""; img.decoding = "sync"; img.src = src; g.append(img);
+  Object.assign(g.style, { left: b.left + "px", top: b.top + "px", width: b.width + "px", height: b.height + "px", borderRadius: to.rad, boxShadow: to.shadow });
   document.body.append(g);
   toEl.style.visibility = "hidden";
   const f = { hide: new Set([toEl]), done: () => {} }; flight = f;
-  const ease = "cubic-bezier(.32,.72,0,1)";
-  const box = (r, s) => ({ left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px", borderRadius: s.rad, boxShadow: s.shadow });
-  const k = g.animate([box(a, from), box(b, to)], { duration: dur, easing: ease, fill: "forwards" });
-  img.animate([{ objectPosition: from.pos || "50% 50%", transform: from.tf || "none" }, { objectPosition: to.pos, transform: to.tf }], { duration: dur, easing: ease, fill: "forwards" });
-  // mendarat: sampul asli muncul di bawahnya, bayangan terbang memudar singkat (tanpa loncatan di frame terakhir)
+  const ease = "cubic-bezier(.3,.8,.2,1)";
+  const sx = a.width / b.width, sy = a.height / b.height, s = Math.max(sx, sy);
+  const k = g.animate([
+    { transform: `translate3d(${a.left - b.left}px, ${a.top - b.top}px, 0) scale(${sx}, ${sy})` },
+    { transform: "translate3d(0, 0, 0) scale(1, 1)" }], { duration: dur, easing: ease, fill: "forwards" });
+  img.animate([{ transform: `scale(${s / sx}, ${s / sy})` }, { transform: "scale(1, 1)" }], { duration: dur, easing: ease, fill: "forwards" });
+  // mendarat: sampul asli (lengkap dengan bingkai/judulnya) muncul di bawah, bayangan terbang memudar
   const done = f.done = (now) => {
     if (f.end) return; f.end = true;
     f.hide.forEach((e) => { e.style.visibility = ""; }); if (flight === f) flight = null;
     if (now) { g.remove(); return; }
-    g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-out", fill: "forwards" }).onfinish = () => g.remove();
-    setTimeout(() => g.remove(), 400);
+    g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: "ease-out", fill: "forwards" }).onfinish = () => g.remove();
+    setTimeout(() => g.remove(), 500);
   };
   k.onfinish = () => done(); setTimeout(() => done(), dur + 250);
 }
@@ -68,5 +76,5 @@ export function flyBack(view) {
   let el = tapped && tapped.id === b.id && tapped.el.isConnected && view.contains(tapped.el) ? tapped.el : null;
   // 2) halaman digambar ulang (mis. Favorit): sampul berjudul sama yang terlihat
   if (!el) el = $$(`a[href="${aHref(b.id)}"] .cover`, view).find(onScreen) || null;
-  if (el && onScreen(el)) fly(b, el, 440);
+  if (el && onScreen(el)) fly(b, el, 400);
 }

@@ -6,7 +6,8 @@ import { initKeyboard } from "./keyboard.js";
 import { initUpdate } from "./update.js";
 import * as api from "./api.js";
 import * as AN from "./anime.js";
-import { icon, $$, closeAsk } from "./ui.js";
+import { icon, $$, closeAsk, closeChoose, toast } from "./ui.js";
+import { plug } from "./native.js";
 import { view, go, goReplace, setActs, getActs, setRender, topbar, loading } from "./shell.js";
 import { TABS, setActiveTab } from "./navbar.js";
 import { gate, OPEN } from "./gate.js";
@@ -117,6 +118,25 @@ initUpdate();     // APK: peringatan versi baru (seperti Ninokuu)
 
 // tombol kembali browser/HP saat pemutar penuh → kecilkan pemutar dulu
 addEventListener("keydown", (e) => { if (e.key === "Escape" && (AN.closeKeypass() || AN.player.onBack())) e.preventDefault(); });
+
+/* Tombol/gestur kembali Android (APK). Tanpa plugin App, Capacitor langsung menutup aplikasi (kasus Ninokuu dulu).
+   Urutan: tutup lapisan yang terbuka (dialog, lembar pilihan, keypass, pemutar penuh → melayang) → halaman dalam
+   (info anime, halaman Akun) mundur ke tempat asalnya (Pencarian, Jadwal, Favorit, info anime sebelumnya, …) →
+   tab lain → Beranda → di Beranda tekan sekali lagi untuk keluar. */
+{
+  const App = plug("App");
+  let exitArmed = false, exitT = 0;
+  App?.addListener("backButton", () => {
+    const ae = document.activeElement;
+    if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName) && document.body.classList.contains("kb-compact")) { ae.blur(); return; }
+    if (closeAsk() || closeChoose() || AN.closeKeypass() || AN.player.onBack()) return;
+    if ((DEPTH[route.name] ?? 0) > 0) { if (navDepth > 0) history.back(); else goReplace(route.name === "p" ? "#/akun" : "#/home"); return; }
+    if (route.name !== "home") { goReplace("#/home"); return; }
+    if (exitArmed) { App.exitApp?.(); return; }
+    exitArmed = true; toast("Tekan kembali sekali lagi untuk keluar", 2000);
+    clearTimeout(exitT); exitT = setTimeout(() => { exitArmed = false; }, 2000);
+  });
+}
 
 api.onAuth((s) => { if (!s) render(); });
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});

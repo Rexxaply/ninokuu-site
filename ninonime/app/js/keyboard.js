@@ -3,9 +3,10 @@
    - Browser/PWA (tanpa plugin): keyboard disimpulkan dari visualViewport saat kolom isian fokus.
    --kb = bagian keyboard yang MENUTUPI layar (0 bila layar sudah menyusut karena adjustResize).
    body.kb-open = keyboard terbuka: menu bawah disembunyikan, halaman login dirapatkan. */
+import { plug } from "./native.js";
 let kbBase = innerHeight, kbOpen = false, kbH = 0;
 const root = document.documentElement;
-const plugin = () => { try { const C = window.Capacitor; return C?.isNativePlatform?.() ? C.Plugins?.Keyboard || null : null; } catch { return null; } };
+const plugin = () => plug("Keyboard");
 const kbCss = (h) => { const dpr = devicePixelRatio || 1; return h > kbBase * 0.62 && dpr > 1.2 ? h / dpr : h; };   // sebagian HP melapor piksel fisik
 const typingEl = () => { const a = document.activeElement; return a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !/^(checkbox|radio|button|submit|range|file)$/.test(a.type))) ? a : null; };
 

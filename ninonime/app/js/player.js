@@ -1,4 +1,5 @@
 // NinoNime · modul anime/player (dipecah dari anime.js)
+import { plug } from "./native.js";
 import { esc, icon, $, $$, toast } from "./ui.js";
 import { episodeSource } from "./sources.js";
 import { AUTO_OPTS, GEAR, mountControls, prefs, setPref, swRow } from "./vctl.js";
@@ -172,8 +173,20 @@ export const player = (() => {
      - Media Session: judul & sampul di notifikasi, putar/jeda, ±10 dtk, episode sebelumnya/berikutnya
        (tombol yang sama muncul di jendela PiP) */
   // APK (Capacitor): PiP Android native lewat plugin NinoPip (apk/native/patch-android.mjs)
-  const nat = () => window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins?.NinoPip : null;
+  const nat = () => plug("NinoPip");
   const natPlaying = (on) => { try { nat()?.setPlaying({ playing: !!on && prefs().autoPip }); } catch {} };
+  // tombol di jendela melayang Android: keadaan putar/jeda & ada episode berikutnya dikirim ke native
+  const hasNextEp = () => !!(ep && cur && (!cur.eps || ep < cur.eps));
+  const natMedia = () => { try { nat()?.setMedia({ paused: !vid || vid.paused, hasNext: hasNextEp() }); } catch {} };
+  addEventListener("ninopipcmd", (e) => {
+    const v = vid; if (!v) return;
+    const c = e.detail;
+    if (c === "toggle") { if (v.paused) v.play().catch(() => {}); else v.pause(); }
+    else if (c === "back5") v.currentTime = Math.max(0, v.currentTime - 5);
+    else if (c === "fwd5") v.currentTime = Math.min(v.duration || 0, v.currentTime + 5);
+    else if (c === "next" && hasNextEp()) go(ep + 1);
+    natMedia();
+  });
   addEventListener("ninopip", (e) => { document.body.classList.toggle("os-pip", !!e.detail); if (!e.detail) ctl?.labels?.(); });
   const inPip = () => !!document.pictureInPictureElement || document.body.classList.contains("os-pip");
   let pipShown = false;   // jendela PiP benar-benar tampil (ukurannya dilaporkan)
@@ -185,7 +198,7 @@ export const player = (() => {
   const ms = "mediaSession" in navigator ? navigator.mediaSession : null;
   const setMs = (k, f) => { try { ms.setActionHandler(k, f); } catch {} };
   function mediaSession(v) {
-    if (!ms || !v) return;
+    if (!v) return;   // (WebView tanpa Media Session tetap memasang penanda putar/jeda untuk PiP native)
     const art = cur?.cover ? new URL(cur.cover, location.href).href : "";
     try { ms.metadata = new MediaMetadata({ title: ep ? `Episode ${ep}` : "Trailer", artist: cur?.title || "", album: "NinoNime", artwork: art ? [{ src: art, sizes: "512x512" }] : [] }); } catch {}
     setMs("play", () => v.play().catch(() => {}));
@@ -198,9 +211,9 @@ export const player = (() => {
     setMs("enterpictureinpicture", prefs().autoPip ? () => { if (vid === v && !inPip()) v.requestPictureInPicture().catch(() => {}); } : null);
     const pos = () => { try { if (v.duration && isFinite(v.duration)) ms.setPositionState({ duration: v.duration, position: Math.min(v.currentTime, v.duration), playbackRate: v.playbackRate || 1 }); } catch {} };
     v.addEventListener("loadedmetadata", pos); v.addEventListener("seeked", pos); v.addEventListener("ratechange", pos);
-    v.addEventListener("play", () => { ms.playbackState = "playing"; pos(); if (vid === v) natPlaying(true); });
-    v.addEventListener("pause", () => { ms.playbackState = "paused"; if (vid === v) natPlaying(false); });
-    v.addEventListener("ended", () => { if (vid === v) natPlaying(false); });
+    v.addEventListener("play", () => { if (ms) ms.playbackState = "playing"; pos(); if (vid === v) { natPlaying(true); natMedia(); } });
+    v.addEventListener("pause", () => { if (ms) ms.playbackState = "paused"; if (vid === v) { natPlaying(false); natMedia(); } });
+    v.addEventListener("ended", () => { if (vid === v) { natPlaying(false); natMedia(); } });
     // di dalam aplikasi: pemutar menandai video sedang diputar di jendela melayang sistem
     v.addEventListener("enterpictureinpicture", (e) => { root?.classList.add("pip"); const w = e.pictureInPictureWindow; pipShown = !!(w && w.width > 0); w?.addEventListener?.("resize", () => { pipShown = w.width > 0; }); });
     v.addEventListener("leavepictureinpicture", () => { root?.classList.remove("pip"); pipShown = false; });
