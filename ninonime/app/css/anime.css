@@ -573,3 +573,67 @@ body.short.ap-mini .jd-today { bottom: calc(8px + 52px + 8px + 70px + 12px + env
 .ps-sw input:checked + .ps-tg::after { transform: translateX(18px); }
 .ps-sw input:focus-visible + .ps-tg { outline: 2px solid var(--red); outline-offset: 2px; }
 .ps-note { margin: 0; padding: 10px 14px 12px; font-size: 11px; color: var(--mu); border-top: 1px solid var(--line); }
+
+/* ===== Riwayat (Favorit → Riwayat) ===== */
+.hv-bar { display: flex; align-items: center; gap: 10px; margin-top: 12px; min-height: 44px; }
+.hv-bar .sq-btn { width: 44px; height: 44px; }
+.hv-bar .sq-btn.danger { color: var(--redt); } .hv-bar .sq-btn:disabled { opacity: .4; }
+.hv-mode { padding: 4px; gap: 2px; border-radius: 999px; background: var(--s1); border: 1px solid var(--line); overflow: visible; }
+.hv-mode button { min-height: 34px; padding: 0 16px; background: transparent; font-weight: 700; color: var(--mu); }
+.hv-mode > .seg-th { background: var(--red); box-shadow: 0 3px 10px rgba(224, 36, 43, .32); }
+.hv-mode.has-th > button[aria-pressed="true"], .hv-mode > button[aria-pressed="true"] { color: #fff; background: transparent; }
+.hv-mode:not(.has-th) > button[aria-pressed="true"] { background: var(--red); }
+.hv-n { flex: 1; font-size: 16px; }
+.hv-all { min-height: 38px; padding: 0 12px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--soft); border: 1px solid var(--line); }
+/* kartu LANJUTKAN */
+.hv-hero { position: relative; display: block; margin-top: 14px; height: 186px; border-radius: 20px; overflow: hidden; background: var(--s1); animation: anIn .45s cubic-bezier(.2, .8, .2, 1) both; }
+.hv-hero .cover.hv-hbg { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
+.hv-hero .cover.hv-hbg img { object-position: center 30%; }
+.hv-hsh { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(5, 8, 14, .2), transparent 35%, rgba(5, 8, 14, .85)); pointer-events: none; }
+.hv-chip { position: absolute; left: 12px; top: 12px; padding: 4px 10px; border-radius: 8px; background: rgba(11, 16, 24, .6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #fff; pointer-events: none; }
+.hv-hi { position: absolute; left: 16px; right: 84px; bottom: 16px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+.hv-ht { font-size: 18px; font-weight: 800; color: #fff; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 6px rgba(0, 0, 0, .5); }
+.hv-hm { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: rgba(255, 255, 255, .86); }
+.hv-play { position: absolute; z-index: 2; right: 14px; bottom: 14px; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #0B1018; box-shadow: 0 8px 22px rgba(0, 0, 0, .4); }
+.hv-play svg { fill: currentColor; margin-left: 3px; } .hv-play:active { scale: .93; }
+.hv-hbar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .18); pointer-events: none; } .hv-hbar i { display: block; height: 100%; background: var(--red); }
+.hv-lk { position: absolute; inset: 0; z-index: 1; }
+/* per tanggal */
+.hv-day { margin-top: 6px; }
+.hv-dh { margin: 22px 0 10px; font-size: 14.5px; }
+.hv-row { position: relative; display: flex; gap: 14px; width: 100%; padding: 8px 0; text-align: left; color: inherit; animation: anIn .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i, 0), 12) * 30ms); }
+.hv-row .cover.hv-cv { width: 70px; height: 96px; aspect-ratio: auto; border-radius: 12px; }
+.hv-mid { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.hv-top { display: flex; align-items: flex-start; gap: 10px; }
+.hv-t { flex: 1; min-width: 0; font-size: 14.5px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hv-time { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 999px; background: var(--s1); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hv-ep { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 10px 12px; border-radius: 14px; background: var(--s1); border: 1px solid var(--line); text-align: left; color: inherit; }
+button.hv-ep:active { scale: .98; background: var(--s2); }
+.hv-eh { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; } .hv-eh span { color: var(--mu); font-size: 12px; font-variant-numeric: tabular-nums; }
+.hv-bar2 { display: block; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .12); overflow: hidden; } .hv-bar2 i { display: block; height: 100%; background: var(--red); }
+/* mode pilih */
+.hv-row.pick { border-radius: 16px; padding: 8px; margin: 2px -8px; width: calc(100% + 16px); transition: background .2s; }
+.hv-row.pick.on { background: rgba(224, 36, 43, .1); }
+.hv-ck { position: absolute; left: 14px; top: 14px; z-index: 3; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; border: 2px solid #fff; background: rgba(11, 16, 24, .5); color: #fff; }
+.hv-row.pick.on .hv-ck { background: var(--red); border-color: var(--red); }
+
+/* ===== Info anime: parallax & Anime Terkait ===== */
+.ad-htx { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; will-change: transform, opacity; }
+.cover.adp { will-change: transform, opacity; transform-origin: 50% 0; }
+.ad-bg { will-change: transform; }
+/* lembar isi (tombol, sinopsis, episode) naik menutupi banner saat digulir */
+.ad-body { position: relative; z-index: 1; background: var(--bg); border-radius: 26px 26px 0 0; padding-top: 18px; margin-top: -8px; box-shadow: 0 -18px 30px -18px rgba(0, 0, 0, .7); }
+.rl-sec .ep-h { margin-bottom: 0; }
+.rl-row { margin: 0 -18px; gap: 12px; padding-top: 2px; }
+.rl-card { flex: none; width: 124px; display: flex; flex-direction: column; gap: 6px; color: inherit; animation: anIn .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.rl-cv { position: relative; display: block; height: 172px; border-radius: 14px; overflow: hidden; background: var(--s1); }
+.rl-cv .cover { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
+.rl-cv::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(5, 8, 14, .8)); pointer-events: none; }
+.rl-tag { position: absolute; z-index: 2; left: 7px; top: 7px; max-width: calc(100% - 14px); padding: 3px 7px; border-radius: 7px; background: var(--red); color: #fff; font-size: 10.5px; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-cv .cv-score { position: absolute; z-index: 2; top: auto; bottom: 7px; right: 7px; }
+.rl-eps { position: absolute; z-index: 2; left: 8px; bottom: 7px; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+.rl-t { font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.rl-card .sk-l { width: 80%; }
+.rl-card:active .rl-cv { transform: scale(.97); }

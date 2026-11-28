@@ -18,7 +18,7 @@ const setFullscreen = async () => {};
 // Sumber video episode: lihat js/sources.js
 
 export const player = (() => {
-  let root = null, st = "closed", cur = null, ep = 0, list = [], yt = null, ytState = -1, vid = null, ctl = null, src0 = null, srvI = 0;
+  let root = null, st = "closed", cur = null, ep = 0, list = [], yt = null, ytState = -1, vid = null, ctl = null, src0 = null, srvI = 0, opts = [];
   const build = () => {
     root = document.createElement("div");
     root.className = "ap"; root.hidden = true;
@@ -58,16 +58,22 @@ export const player = (() => {
       // pemutar kustom: tanpa kontrol bawaan browser, kontrol NinoNime di atas video (js/vctl.js)
       m.innerHTML = `<video class="ap-v" playsinline autoplay preload="metadata" ${poster ? `poster="${esc(poster)}"` : ""}></video>`;
       vid = $("video", m);
-      src0 = src; const svs = src.servers?.length ? src.servers : [{ name: "Server 1", url: src.url }];
-      srvI = Math.min(svs.length - 1, Math.max(0, Number(api.lsGet("playerServer", 0)) || 0));
-      vid.src = svs[srvI].url;
+      // pilihan sumber: tiap server × resolusi menjadi satu pilihan (resolusi yang terakhir dipilih diingat)
+      src0 = src; opts = flatOpts(src);
+      const want = api.lsGet("playerSrc") || {};
+      srvI = Math.max(0, opts.findIndex((o) => o.s === want.s && o.q === want.q)); if (srvI < 0 || !opts[srvI]) srvI = 0;
+      if (want.q && opts[srvI].q !== want.q) { const k = opts.findIndex((o) => o.q === want.q); if (k >= 0) srvI = k; }
+      vid.src = opts[srvI].url;
       const myVid = vid, epNow = ep;
       ctl = mountControls(m, vid, {
         intro: src.intro, endingFromEnd: src.endingFromEnd,
         hasNext: () => !!(ep && (!cur.eps || ep < cur.eps)),
         onNext: () => { if (vid === myVid && ep === epNow) go(ep + 1); },
         // server gagal dimuat → coba server berikutnya otomatis
-        onError: () => { if (vid !== myVid) return; if (srvI + 1 < svs.length) { toast(`${svs[srvI].name} gagal dimuat, pindah ke ${svs[srvI + 1].name}`); setServer(srvI + 1); } else toast("Video gagal dimuat di semua server."); },
+        // sumber gagal dimuat → pindah ke server berikutnya (resolusi sama bila ada)
+        onError: () => { if (vid !== myVid) return; const cur0 = opts[srvI];
+          const k = opts.findIndex((o, i) => i > srvI && o.s !== cur0.s && o.q === cur0.q), n = k >= 0 ? k : opts.findIndex((o, i) => i > srvI && o.s !== cur0.s);
+          if (n >= 0) { toast(`${cur0.s} gagal dimuat, pindah ke ${opts[n].s}`); setServer(n); } else toast("Video gagal dimuat di semua server."); },
       });
       drawSettings();
       const h = hist().find((y) => y.id === cur.id && Number(y.ep) === ep);
@@ -78,11 +84,14 @@ export const player = (() => {
     }
     syncPP();
   }
-  // pindah server: posisi & status putar dipertahankan
+  // { s: nama server, q: resolusi, url } untuk tiap pilihan
+  const flatOpts = (src) => { const svs = src.servers?.length ? src.servers : [{ name: "Server 1", url: src.url }];
+    return svs.flatMap((v) => (v.q?.length ? v.q.map((q) => ({ s: v.name, q: q.label, url: q.url })) : [{ s: v.name, q: "", url: v.url }])); };
+  // pindah server / resolusi: posisi & status putar dipertahankan
   function setServer(i) {
-    if (!vid || !src0) return; const svs = src0.servers || []; if (!svs[i]) return;
-    const t = vid.currentTime, playing = !vid.paused; srvI = i; api.lsSet("playerServer", i);
-    vid.src = svs[i].url;
+    if (!vid || !src0 || !opts[i]) return;
+    const t = vid.currentTime, playing = !vid.paused; srvI = i; api.lsSet("playerSrc", { s: opts[i].s, q: opts[i].q });
+    vid.src = opts[i].url;
     vid.addEventListener("loadedmetadata", () => { if (t > 1) vid.currentTime = t; if (playing) vid.play().catch(() => {}); }, { once: true });
     drawSettings();
   }
@@ -90,14 +99,16 @@ export const player = (() => {
   function drawSettings() {
     const box = root && $(".ap-set", root); if (!box) return;
     if (!vid || !src0) { box.innerHTML = ""; return; }
-    const svs = src0.servers?.length ? src0.servers : [{ name: "Server 1", url: src0.url }], p = prefs();
+    const p = prefs(), groups = [...new Set(opts.map((o) => o.s))];
     const sw = (k, t, sub) => `<label class="ps-row ps-sw"><span class="ps-l"><b>${t}</b><span>${sub}</span></span><input type="checkbox" role="switch" data-ps="${k}" ${p[k] ? "checked" : ""}><i class="ps-tg" aria-hidden="true"></i></label>`;
     box.innerHTML = `<div class="ps">
-      <label class="ps-row"><span class="ps-l"><b>Server</b><span>Ganti bila lambat atau gagal</span></span><span class="ps-sel"><select data-ps="server" aria-label="Server">${svs.map((s, i) => `<option value="${i}" ${i === srvI ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
+      <label class="ps-row"><span class="ps-l"><b>Server</b><span>Server &amp; resolusi video</span></span><span class="ps-sel"><select data-ps="server" aria-label="Server dan resolusi">${groups.map((g) => { const its = opts.map((o, i) => [o, i]).filter(([o]) => o.s === g);
+        const op = its.map(([o, i]) => `<option value="${i}" ${i === srvI ? "selected" : ""}>${esc(o.q ? `${o.q} ${g}` : g)}</option>`).join("");
+        return groups.length > 1 || its.length > 1 ? `<optgroup label="${esc(g)}">${op}</optgroup>` : op; }).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
       <label class="ps-row"><span class="ps-l"><b>Kecepatan</b><span>Kecepatan putar video</span></span><span class="ps-sel"><select data-ps="speed" aria-label="Kecepatan">${SPEEDS.map((v) => `<option value="${v}" ${v === p.speed ? "selected" : ""}>${v === 1 ? "Normal" : v + "×"}</option>`).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
       ${sw("autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai")}
       ${sw("autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai")}
-      ${src0.demo ? `<p class="ps-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0).</p>` : ""}</div>`;
+      ${src0.demo ? `<p class="ps-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0). Di demo, semua resolusi satu server memutar file yang sama.</p>` : ""}</div>`;
   }
   function onSetting(e) {
     const t = e.target.closest?.("[data-ps]"); if (!t) return;

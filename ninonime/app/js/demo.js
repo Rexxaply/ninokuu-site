@@ -34,6 +34,8 @@ const delay = (v) => new Promise((r) => setTimeout(() => r(v), 250));   // sedik
 
 export const DEMO_API = {
   now: (p = 1, t = "") => delay(page(DEMO_ANIME.filter((a) => a.airing).filter(byType(t)), p)),
+  related: (id) => { const i = DEMO_ANIME.findIndex((a) => a.id === Number(id)), L = ["Sequel", "Prequel", "Side Story", "Spin-Off", "Alternative Version"];
+    return delay([1, 2, 3, 5, 8].map((k, j) => { const a = DEMO_ANIME[(i + k) % DEMO_ANIME.length]; return { id: a.id, title: a.title, rel: L[j] }; })); },
   hot: () => delay([...DEMO_ANIME].filter((a) => a.airing).sort((a, b) => b.members - a.members).slice(0, 10)),
   top: () => delay([...DEMO_ANIME].filter((a) => a.airing).sort((a, b) => b.score - a.score).slice(0, 10)),
   search: (q, p = 1, t = "") => { const w = String(q || "").toLowerCase(); return delay(page(DEMO_ANIME.filter((a) => a.title.toLowerCase().includes(w)).filter(byType(t)), p)); },

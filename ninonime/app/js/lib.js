@@ -6,10 +6,27 @@ import { esc, icon, $ } from "./ui.js";
 /* ---------- riwayat tonton (di HP) ---------- */
 const HK = "animeHist";
 export const hist = () => api.lsGet(HK, []);
+// histEps(): catatan per episode (mode Multi di Riwayat): satu baris untuk tiap pasangan anime + episode
+const HEK = "animeHistEp";
+export const histEps = () => api.lsGet(HEK, []);
 export function saveHist(a, ep, t = 0, dur = 0) {
-  const list = hist().filter((x) => x.id !== a.id);
-  list.unshift({ id: a.id, title: a.title, cover: a.cover, ep, t: Math.round(t), dur: Math.round(dur), at: Date.now() });
-  api.lsSet(HK, list.slice(0, 60));
+  // membuka lagi episode yang sama (t = 0) tidak menghapus posisi tonton terakhirnya
+  const old = hist().find((x) => x.id === a.id && Number(x.ep) === Number(ep)), oldE = histEps().find((x) => x.id === a.id && Number(x.ep) === Number(ep));
+  const row = (o) => ({ id: a.id, title: a.title, cover: a.cover, ep, t: Math.round(t || o?.t || 0), dur: Math.round(dur || o?.dur || 0), at: Date.now() });
+  api.lsSet(HK, [row(old), ...hist().filter((x) => x.id !== a.id)].slice(0, 60));
+  api.lsSet(HEK, [row(oldE), ...histEps().filter((x) => !(x.id === a.id && Number(x.ep) === Number(ep)))].slice(0, 300));
+}
+// hapus riwayat: seluruh anime (Single) atau episode tertentu (Multi)
+export function dropHist(ids = [], eps = []) {
+  const idS = new Set(ids), epS = new Set(eps.map(([i, e]) => `${i}:${e}`));
+  const leftE = histEps().filter((x) => !idS.has(x.id) && !epS.has(`${x.id}:${x.ep}`));
+  api.lsSet(HEK, leftE);
+  // anime yang semua episodenya dihapus ikut hilang dari daftar Single; yang tersisa menunjuk episode terbaru yang masih ada
+  api.lsSet(HK, hist().filter((x) => !idS.has(x.id)).map((x) => {
+    if (!epS.has(`${x.id}:${x.ep}`)) return x;
+    const n = leftE.filter((y) => y.id === x.id).sort((p, q) => q.at - p.at)[0];
+    return n ? { ...n } : null;
+  }).filter(Boolean));
 }
 
 /* =====================================================================

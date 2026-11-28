@@ -55,6 +55,15 @@ const SFW = "sfw=true";
 export const A = {
   now: async (page = 1, type = "") => { const r = await jget(`/seasons/now?${SFW}&limit=24&page=${page}${type ? "&filter=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
   top: async () => uniq(((await jget(`/top/anime?filter=airing&${SFW}&limit=10`, 180)).data || []).map(mapA)),
+  // Anime Terkait: relasi MyAnimeList (sekuel, prekuel, …) tanpa sampul → { id, title, rel }; tidak ada relasi → rekomendasi (dengan sampul)
+  related: async (id) => {
+    const r = await jget(`/anime/${id}/relations`, 720), seen = new Set([Number(id)]);
+    const rel = (r.data || []).flatMap((g) => (g.entry || []).filter((e) => e.type === "anime").map((e) => ({ id: e.mal_id, title: e.name, rel: g.relation })))
+      .filter((e) => !seen.has(e.id) && seen.add(e.id)).slice(0, 10);
+    if (rel.length) return rel;
+    const rc = await jget(`/anime/${id}/recommendations`, 720);
+    return (rc.data || []).slice(0, 10).map((x) => ({ id: x.entry?.mal_id, title: x.entry?.title, rel: "Mirip", cover: DEMO || x.entry?.images?.webp?.large_image_url || x.entry?.images?.jpg?.image_url || "" })).filter((e) => e.id);
+  },
   // 10 Hot Anime: anime musim ini yang paling banyak ditonton (jumlah anggota MyAnimeList)
   hot: async () => [...(await A.now(1)).items].sort((a, b) => (b.members || 0) - (a.members || 0)).slice(0, 10),
   search: async (q, page = 1, type = "") => { const r = await jget(`/anime?q=${encodeURIComponent(q)}&${SFW}&limit=24&page=${page}&order_by=members&sort=desc${type ? "&type=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },

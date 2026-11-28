@@ -5,12 +5,18 @@ import { DAYS, MONTHS } from "./const.js";
 import { A, hhmm, wibSlot } from "./data.js";
 import { FK, favs, isFav, statusName, toggleFav } from "./fav.js";
 import { adoptFly, fly, setBackFly, takeMorph } from "./fly.js";
-import { errHtml, fmtScore, hist } from "./lib.js";
+import { aHref, acv, errHtml, fmtScore, hist } from "./lib.js";
 import { player } from "./player.js";
 
 // --- Info anime (poster di tengah, sinopsis, daftar episode bergambar) ---
 export const fmtDate = (iso) => { const t = Date.parse(iso || ""); if (!t) return ""; const d = new Date(t + 7 * 3600e3); return `${String(d.getUTCDate()).padStart(2, "0")} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
 let epDesc = false, epGridView = false;
+const REL = { Sequel: "Sekuel", Prequel: "Prekuel", "Side Story": "Cerita sampingan", "Side story": "Cerita sampingan", "Alternative Version": "Versi lain", "Alternative version": "Versi lain",
+  "Alternative Setting": "Latar lain", Summary: "Ringkasan", "Spin-Off": "Spin-off", "Spin-off": "Spin-off", "Parent Story": "Cerita utama", "Parent story": "Cerita utama", "Full Story": "Cerita lengkap", "Full story": "Cerita lengkap", Character: "Karakter", Other: "Lainnya", Mirip: "Mirip" };
+// kartu Anime Terkait (sampul menyusul bila datanya belum ada)
+const relCard = (r, i) => `<a class="rl-card" href="${aHref(r.id)}" data-rid="${r.id}" style="--i:${i}"><span class="rl-cv">${r.cover ? acv(r.cover, r.title) : `<span class="cover sk"></span>`}
+  <span class="rl-tag">${esc(REL[r.rel] || r.rel || "Terkait")}</span>${fmtScore(r.score) ? `<span class="cv-score">${icon("star", 10, 2)}${fmtScore(r.score)}</span>` : ""}${r.eps ? `<span class="rl-eps">Eps ${r.eps}</span>` : ""}</span>
+  <b class="rl-t">${esc(r.title || "")}</b>${r.type ? `<span class="mu xs">${esc([r.type, r.year].filter(Boolean).join(" · "))}</span>` : ""}</a>`;
 export async function vDetail(view, x, id) {
   id = Number(id);
   const from = takeMorph();
@@ -43,15 +49,16 @@ export async function vDetail(view, x, id) {
     view.innerHTML = `<div class="ad">${bar(a.title)}
 <div class="ad-hero"><span class="ad-bg" style="background-image:url('${esc(a.cover)}')"></span>
   <span class="cover adp">${a.cover ? `<img src="${esc(a.cover)}" alt="">` : ""}${fmtScore(a.score) ? `<span class="adp-score">${icon("star", 12, 2)}${fmtScore(a.score).replace(/,?0$/, "")}</span>` : ""}</span>
-  <h1 class="ad-t">${esc(a.title)}</h1>${a.alt ? `<span class="ad-alt">${esc(a.alt)}</span>` : ""}
+  <span class="ad-htx"><h1 class="ad-t">${esc(a.title)}</h1>${a.alt ? `<span class="ad-alt">${esc(a.alt)}</span>` : ""}
   <span class="ad-meta">${meta}</span>
   ${a.genres.length ? `<span class="ad-gen">${a.genres.slice(0, 5).map((g) => `<i>${esc(g)}</i>`).join("")}</span>` : ""}
-  ${slot ? `<span class="ad-slot">${icon("clock", 12, 2)}Tayang tiap ${DAYS[slot.day]} ${hhmm(slot.min)} WIB</span>` : ""}
+  ${slot ? `<span class="ad-slot">${icon("clock", 12, 2)}Tayang tiap ${DAYS[slot.day]} ${hhmm(slot.min)} WIB</span>` : ""}</span>
 </div>
-<div class="px col g14">
+<div class="px col g14 ad-body">
   <div class="row g8 ad-cta"><button class="btn primary grow" data-act="play">${icon("play", 18, 2)}${h ? `Lanjut episode ${esc(h.ep)}` : "Tonton episode 1"}</button>${a.trailer ? `<button class="btn ghost" data-act="trailer">${icon("tv", 18, 2)}Trailer</button>` : ""}</div>
   <div class="ad-card"><b>Sinopsis</b><p class="ad-syn" id="syn">${esc(a.synopsis || "Belum ada sinopsis.").replace(/\n+/g, "<br>")}</p>
     ${a.synopsis.length > 220 ? `<button class="ad-more" data-act="syn">Lihat selengkapnya ${icon("chev", 14, 2.2)}</button>` : ""}</div>
+  <section class="rl-sec" id="rel"><div class="ep-h"><h2>Anime Terkait</h2></div><div class="hs rl-row">${`<span class="rl-card"><span class="rl-cv"><span class="cover sk"></span></span><span class="sk sk-l"></span></span>`.repeat(3)}</div></section>
   <div class="ep-h"><h2>Episode <span class="mu">(${total()})</span></h2><span class="row g6"><button class="sq-btn" data-act="epGrid" aria-label="${epGridView ? "Tampilan daftar" : "Tampilan kotak"}">${icon(epGridView ? "list" : "grid", 17, 2)}</button><button class="sq-btn${epDesc ? " on" : ""}" data-act="epSort" aria-label="Urutkan episode">${icon("sort", 17, 2)}</button></span></div>
   <div id="eps">${epList()}</div>
   ${a.studios.length ? `<p class="mu xs">Studio: ${esc(a.studios.join(", "))}${a.duration ? " · " + esc(a.duration) : ""}</p>` : ""}
@@ -60,10 +67,20 @@ export async function vDetail(view, x, id) {
   draw();
   adoptFly($(".cover.adp", view));   // poster baru (setelah data tiba) tetap tersembunyi sampai sampul yang terbang mendarat
   // judul muncul di bar atas setelah poster tergulir lewat
-  const onScroll = () => { const b = $(".ad-bar", view); if (b) b.classList.toggle("solid", window.scrollY > 260); };
+  // parallax: latar & poster bergerak lebih lambat dari gulir lalu memudar, lembar isi naik menutupinya
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let pr = 0;
+  const parallax = () => { pr = 0; const y = Math.max(0, window.scrollY), bg = $(".ad-bg", view), po = $(".cover.adp", view), tx = $(".ad-htx", view);
+    if (still || !po) return;
+    const k = Math.min(1, y / 340);
+    if (bg) bg.style.transform = `translate3d(0, ${(y * 0.55).toFixed(1)}px, 0) scale(${(1.15 + k * 0.12).toFixed(3)})`;
+    po.style.transform = y ? `translate3d(0, ${(y * 0.42).toFixed(1)}px, 0) scale(${(1 - k * 0.12).toFixed(3)})` : "";
+    po.style.opacity = y ? (1 - k * 0.85).toFixed(3) : "";
+    if (tx) { tx.style.transform = y ? `translate3d(0, ${(y * 0.25).toFixed(1)}px, 0)` : ""; tx.style.opacity = y ? Math.max(0, 1 - y / 260).toFixed(3) : ""; } };
+  const onScroll = () => { const b = $(".ad-bar", view); if (b) b.classList.toggle("solid", window.scrollY > 260); if (!pr) pr = requestAnimationFrame(parallax); };
   addEventListener("scroll", onScroll, { passive: true }); onScroll();
   x.setCleanup(() => {
-    removeEventListener("scroll", onScroll);
+    removeEventListener("scroll", onScroll); cancelAnimationFrame(pr);
     const p = $(".cover.adp", view); if (p) { const r = p.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) setBackFly({ id, r, rad: getComputedStyle(p).borderRadius, src: a.cover, at: Date.now() }); }
   });
   const redrawEps = () => { const el = $("#eps"); if (el) el.innerHTML = epList(); };
@@ -88,5 +105,19 @@ export async function vDetail(view, x, id) {
   try { eps = await A.episodes(id); } catch {}
   try { thumbs = await A.epThumbs(id); } catch {}
   if ($("#eps")) { const hEl = $(".ep-h h2 .mu"); if (hEl) hEl.textContent = `(${total()})`; redrawEps(); }
+  // Anime Terkait: daftar dulu, sampul & detail menyusul satu per satu (Jikan dibatasi ±3 permintaan/detik)
+  const relSec = $("#rel", view); if (!relSec) return;
+  let rels = []; try { rels = await A.related(id); } catch {}
+  if (!relSec.isConnected) return;
+  if (!rels.length) { relSec.remove(); return; }
+  const row = $(".rl-row", relSec); row.innerHTML = rels.map(relCard).join("");
+  for (const r of rels) {
+    if (r.cover && r.score != null) continue;
+    let d; try { d = await A.detail(r.id); } catch { continue; }
+    if (!relSec.isConnected) return;
+    const el = row.querySelector(`[data-rid="${r.id}"]`); if (!el) continue;
+    const n = document.createElement("div"); n.innerHTML = relCard({ ...r, cover: d.cover, score: d.score, eps: d.eps, type: d.type, year: d.year, title: r.title || d.title }, 0);
+    const c = n.firstElementChild; c.style.animation = "none"; el.replaceWith(c);
+  }
 }
 
