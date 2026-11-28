@@ -57,16 +57,10 @@ window.visualViewport?.addEventListener("scroll", () => { if (native && kbOpen) 
 addEventListener("orientationchange", () => setTimeout(() => { if (!kbOpen) kbBase = innerHeight; }, 400));
 
 export function initKeyboard() {
-  const K = plugin();
-  if (K) {
-    native = true; document.body.classList.add("kb-native");
-    K.addListener("keyboardWillShow", (i) => setKeyboard(Number(i?.keyboardHeight) || 0, "will"));
-    K.addListener("keyboardDidShow", (i) => setKeyboard(Number(i?.keyboardHeight) || 0, "did"));
-    K.addListener("keyboardWillHide", () => setKeyboard(0, "will"));
-    K.addListener("keyboardDidHide", () => setKeyboard(0, "did"));
-    return;
-  }
-  // tanpa plugin (browser/PWA): sama dengan Ninokuu Manga di browser. Chrome sendiri yang menyusutkan layar
+  // APK juga memakai cara browser di bawah ini: plugin Capacitor Keyboard (resize "native") sudah menyusutkan layar
+  // seperti Chrome. Dulu APK memakai jalur sendiri (ruang --kb + animasi kartu + gulir halus + geser formulir)
+  // yang bertumpuk dengan penyusutan layar → halaman login tersendat/melompat saat keyboard muncul.
+  // browser/PWA/APK: sama dengan Ninokuu Manga di browser. Chrome sendiri yang menyusutkan layar
   // (interactive-widget=resizes-content); aplikasi TIDAK merapatkan, menganimasikan, atau menambah ruang.
   // Satu-satunya bantuan (seperti Ninokuu saat keyboard muncul): setelah layar selesai menyusut, kolom yang
   // disentuh digulir ke tengah area yang terlihat, sekali.
