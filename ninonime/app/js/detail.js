@@ -73,12 +73,16 @@ export async function vDetail(view, x, id) {
   const parallax = () => { pr = 0; const y = Math.max(0, window.scrollY), bg = $(".ad-bg", view), po = $(".cover.adp", view), tx = $(".ad-htx", view);
     if (still || !po) return;
     const k = Math.min(1, y / 340);
-    if (bg) bg.style.transform = `translate3d(0, ${(y * 0.55).toFixed(1)}px, 0) scale(${(1.15 + k * 0.12).toFixed(3)})`;
+    // latar hanya digeser (skala tetap): mengubah skala lapisan ber-blur besar tiap frame bikin gulir tersendat di HP
+    if (bg) bg.style.transform = `translate3d(0, ${(y * 0.55).toFixed(1)}px, 0) scale(1.15)`;
     po.style.transform = y ? `translate3d(0, ${(y * 0.42).toFixed(1)}px, 0) scale(${(1 - k * 0.12).toFixed(3)})` : "";
     po.style.opacity = y ? (1 - k * 0.85).toFixed(3) : "";
     if (tx) { tx.style.transform = y ? `translate3d(0, ${(y * 0.25).toFixed(1)}px, 0)` : ""; tx.style.opacity = y ? Math.max(0, 1 - y / 260).toFixed(3) : ""; } };
-  const onScroll = () => { const b = $(".ad-bar", view); if (b) b.classList.toggle("solid", window.scrollY > 260); if (!pr) pr = requestAnimationFrame(parallax); };
-  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  // bar atas muncul bertahap mengikuti gulir (latar & judul memudar masuk bersama poster yang memudar keluar)
+  const barK = () => { const b = $(".ad-bar", view); if (!b) return; const k = Math.min(1, Math.max(0, (window.scrollY - 110) / 170));
+    b.style.setProperty("--bk", k.toFixed(3)); b.classList.toggle("solid", k > 0.5); b.classList.toggle("glass", k > 0.02); };
+  const onScroll = () => { if (!pr) pr = requestAnimationFrame(() => { parallax(); barK(); }); };
+  addEventListener("scroll", onScroll, { passive: true }); parallax(); barK();
   x.setCleanup(() => {
     removeEventListener("scroll", onScroll); cancelAnimationFrame(pr);
     const p = $(".cover.adp", view); if (p) { const r = p.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) setBackFly({ id, ...shot(p), at: Date.now() }); }

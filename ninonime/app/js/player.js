@@ -215,7 +215,11 @@ export const player = (() => {
   let morphing = null;
   function toMini() {
     const v = media(), sh = $(".ap-sheet", root);
-    const a = v.getBoundingClientRect();   // posisi video saat ini (termasuk pratinjau geser)
+    const gh = $(".ap-ghost", root), fromDrag = !!gh;
+    const a0 = v.getBoundingClientRect();   // posisi video saat ini (termasuk pratinjau geser)
+    const ga = gh?.getBoundingClientRect(), grad = gh ? parseFloat(gh.style.borderRadius) || 16 : 0;
+    const a = gh ? { left: ga.left, top: ga.top, width: ga.width, height: ga.height } : a0;
+    gh?.remove(); root.classList.remove("dragging"); root.style.removeProperty("--pe");
     const vid0 = $(".ap-vid", root); vid0.style.transform = ""; vid0.style.transformOrigin = ""; vid0.style.borderRadius = ""; vid0.style.overflow = ""; vid0.style.transition = "";
     sh.style.backgroundColor = ""; sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
     applyMiniPos(); setState("mini");
@@ -225,11 +229,14 @@ export const player = (() => {
     root.classList.add("morph");
     const ease = "cubic-bezier(.32,.72,0,1)", dur = 420;
     const k = sh.animate([
-      { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", borderRadius: "0px", backgroundColor: "rgba(0,0,0,1)" },
+      fromDrag ? { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", borderRadius: grad + "px" }
+        : { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", borderRadius: "0px", backgroundColor: "rgba(0,0,0,1)" },
       { left: b.left + "px", top: b.top + "px", width: b.width + "px", height: b.height + "px", borderRadius: "18px" }],
       { duration: dur, easing: ease });
-    v.animate([{ width: a.width + "px" }, { width: mw + "px" }], { duration: dur, easing: ease });
-    $$(".ap-mt, .ap-mb, .ap-bar", root).forEach((el) => el.animate([{ opacity: 0, transform: "translateX(-8px)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: dur * 0.55, easing: "ease-out", fill: "backwards" }));
+    v.animate([{ width: a0.width + "px" }, { width: mw + "px" }], { duration: dur, easing: ease });
+    // dari geser: judul sudah tampil di kartu pratinjau → langsung terlihat (tidak berkedip); dari tombol: memudar masuk
+    if (!fromDrag) $$(".ap-mt, .ap-mb, .ap-bar", root).forEach((el) => el.animate([{ opacity: 0, transform: "translateX(-8px)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: dur * 0.55, easing: "ease-out", fill: "backwards" }));
+    else $$(".ap-mb, .ap-bar", root).forEach((el) => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, delay: dur * 0.4, fill: "backwards" }));
     morphing = k;
     const done = () => { if (morphing === k) { morphing = null; root.classList.remove("morph"); } };
     k.onfinish = done; k.oncancel = done;
@@ -328,16 +335,26 @@ export const player = (() => {
       const bottom = innerHeight - nav + Math.min(0, miniPos.y), top = bottom - card;
       return { left: miniPos.side === "left" ? 12 : innerWidth - 12 - w, top, width: w, height: h };
     };
-    // geser ke bawah: video ikut jari langsung menuju posisi jendela melayang, latar pemutar memudar
+    /* geser ke bawah (seperti YouTube): sejak awal geseran video sudah berbentuk kartu jendela melayang —
+       kotak gelap berisi judul & episode tumbuh di bawah video, sudut membulat — dan bergerak mengikuti jari
+       menuju posisi jendela melayang. Isi pemutar & kontrol di atas video memudar cepat, latar ikut memudar. */
+    const STRIP = 52;
+    const ghost = () => { let g = $(".ap-ghost", root); if (!g) { g = document.createElement("div"); g.className = "ap-ghost"; g.innerHTML = `<b></b><span></span>`; sh.prepend(g); }
+      g.querySelector("b").textContent = cur?.title || ""; g.querySelector("span").textContent = ep ? `Episode ${ep}` : "Trailer"; return g; };
     const preview = (p) => {
+      const e = 1 - Math.pow(1 - p, 1.6);   // sedikit dipercepat di awal: bentuk kartu langsung terlihat
       const R = { left: A.left + (M.left - A.left) * p, top: A.top + (M.top - A.top) * p, width: A.width + (M.width - A.width) * p };
+      const s = R.width / A.width, vh = A.height * s, strip = STRIP * Math.min(1, e * 2.6), rad = 16 * Math.min(1, e * 2);
       const v = vEl(); v.style.transition = "none"; v.style.transformOrigin = "0 0";
-      v.style.transform = `translate(${(R.left - A.left).toFixed(1)}px, ${(R.top - A.top).toFixed(1)}px) scale(${(R.width / A.width).toFixed(4)})`;
-      v.style.borderRadius = `${(p * 14).toFixed(1)}px`; v.style.overflow = "hidden";
-      sh.style.backgroundColor = `rgba(11, 16, 24, ${(1 - p).toFixed(3)})`;
-      root.style.setProperty("--p", p.toFixed(3));
+      v.style.transform = `translate(${(R.left - A.left).toFixed(1)}px, ${(R.top - A.top).toFixed(1)}px) scale(${s.toFixed(4)})`;
+      v.style.borderRadius = `${(rad / s).toFixed(1)}px ${(rad / s).toFixed(1)}px 0 0`; v.style.overflow = "hidden";
+      const g = ghost(); g.style.cssText = `left:${R.left}px;top:${R.top}px;width:${R.width}px;height:${vh + strip}px;border-radius:${rad}px;opacity:${Math.min(1, e * 3).toFixed(3)}`;
+      g.style.setProperty("--to", Math.max(0, Math.min(1, (e - 0.3) / 0.35)).toFixed(3));   // judul muncul setelah kotaknya cukup tinggi
+      sh.style.backgroundColor = `rgba(11, 16, 24, ${(1 - e).toFixed(3)})`;
+      root.style.setProperty("--p", p.toFixed(3)); root.style.setProperty("--pe", e.toFixed(3)); root.classList.add("dragging");
     };
-    const clearPreview = () => { const v = vEl(); v.style.transform = ""; v.style.transformOrigin = ""; v.style.borderRadius = ""; v.style.overflow = ""; v.style.transition = ""; sh.style.backgroundColor = ""; root.style.removeProperty("--p"); };
+    const clearPreview = () => { const v = vEl(); v.style.transform = ""; v.style.transformOrigin = ""; v.style.borderRadius = ""; v.style.overflow = ""; v.style.transition = ""; sh.style.backgroundColor = "";
+      root.style.removeProperty("--p"); root.style.removeProperty("--pe"); root.classList.remove("dragging"); $(".ap-ghost", root)?.remove(); };
     sh.addEventListener("touchstart", (e) => {
       if (fs || e.touches.length > 1) return;
       const inBody = body.contains(e.target);
@@ -369,6 +386,7 @@ export const player = (() => {
           const v = vEl(), from = v.style.transform, bg = sh.style.backgroundColor; clearPreview();
           v.animate([{ transform: from, transformOrigin: "0 0" }, { transform: "none", transformOrigin: "0 0" }], { duration: 240, easing: "cubic-bezier(.2,.8,.2,1)" });
           sh.animate([{ backgroundColor: bg }, { backgroundColor: "rgb(11, 16, 24)" }], { duration: 240 });
+          $(".ap-body", root).animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240 });
         }
       } else if (st === "mini") {
         if (!axis) return;   // hanya ketukan → onClick membuka penuh

@@ -799,3 +799,21 @@ html:has(body.ap-full) { overflow: hidden; }
 /* pratinjau geser kecilkan diatur JS (video menuju jendela melayang), bukan skala dari kiri atas */
 .ap.full .ap-vid { transform: none; }
 .ap.full .ap-sheet { transition: none; }
+
+/* bar atas info anime: muncul bertahap mengikuti gulir (--bk 0..1), tanpa transisi tertunda */
+.ad-bar { background: rgba(11, 16, 24, calc(.86 * var(--bk, 0))); box-shadow: 0 1px 0 rgba(255, 255, 255, calc(.07 * var(--bk, 0))); }
+.ad-bar.glass { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.ad-bar .ad-bar-t, .ad-bar.solid .ad-bar-t { opacity: var(--bk, 0); transform: translateY(calc((1 - var(--bk, 0)) * 8px)); transition: none; }
+.ad-bar .icon-btn, .ad-bar.solid .icon-btn { background: rgba(11, 16, 24, calc(.45 * (1 - var(--bk, 0)))); }
+.ad-bar.solid { background: rgba(11, 16, 24, calc(.86 * var(--bk, 0))); }
+.ad-bg { will-change: transform; transform: translate3d(0, 0, 0) scale(1.15); }
+
+/* kartu pratinjau saat menggeser pemutar ke bawah */
+.ap-ghost { position: fixed; z-index: 0; background: rgba(24, 31, 45, .96); border: 1px solid rgba(255, 255, 255, .1); box-shadow: 0 16px 40px rgba(0, 0, 0, calc(.6 * var(--pe, 0)));
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 1px; padding: 0 34px 10px 12px; overflow: hidden; pointer-events: none; }
+.ap-ghost b { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: var(--to, 0); }
+.ap-ghost span { font-size: 11.5px; color: var(--mu); opacity: var(--to, 0); }
+.ap.full .ap-vid { z-index: 1; }
+/* selama menggeser: isi pemutar & kontrol video memudar cepat */
+.ap.dragging .ap-body { opacity: calc(1 - var(--pe, 0) * 4); }
+.ap.dragging .vc, .ap.dragging .ap-ctl { opacity: 0; transition: opacity .12s; pointer-events: none; }
