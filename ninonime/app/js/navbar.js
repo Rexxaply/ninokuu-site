@@ -15,6 +15,8 @@ export function setActiveTab(name) {
   $$("#nav a").forEach((a) => a.setAttribute("aria-current", String(a.dataset.tab === name)));
 }
 
+// gulir oleh aplikasi (mis. Jadwal meluncur ke SEKARANG / ke tanggal yang diketuk) diabaikan, bar tidak mengecil
+export const quietNav = (ms = 800) => { quiet = Math.max(quiet, performance.now() + ms); acc = 0; };
 const setMin = (on) => document.body.classList.toggle("nav-min", on);
 addEventListener("scroll", () => {
   const y = scrollY; if (performance.now() < quiet) { lastY = y; acc = 0; return; }

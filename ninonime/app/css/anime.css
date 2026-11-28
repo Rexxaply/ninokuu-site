@@ -219,7 +219,7 @@ body[data-mode="anime"] .an-logo .an-badge { animation: badgeIn .5s cubic-bezier
 .ap.mini .ap-sheet { inset: auto 10px calc(14px + 68px + 10px + env(safe-area-inset-bottom)) 10px; height: 70px; max-width: 560px; margin: 0 auto; padding: 0; border-radius: 18px; overflow: hidden;
   z-index: 21; background: rgba(24, 31, 45, .96); border: 1px solid rgba(255, 255, 255, .1); box-shadow: 0 16px 38px rgba(0, 0, 0, .55); touch-action: none; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .ap.mini .ap-sheet { background: rgba(24, 31, 45, .78); backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); } }
-body.nav-off .ap.mini .ap-sheet, body.nav-min .ap.mini .ap-sheet { bottom: calc(14px + env(safe-area-inset-bottom)); }
+body.nav-off .ap.mini .ap-sheet { bottom: calc(14px + env(safe-area-inset-bottom)); }
 body.short .ap.mini .ap-sheet { bottom: calc(8px + 52px + 8px + env(safe-area-inset-bottom)); }
 body.short.nav-off .ap.mini .ap-sheet { bottom: calc(8px + env(safe-area-inset-bottom)); }
 .ap.mini .ap-vid { aspect-ratio: auto; height: 100%; display: flex; align-items: center; gap: 10px; padding-right: 4px; background: transparent; }
@@ -386,3 +386,88 @@ body[data-mode="anime"] #nav a { font-size: 10.5px; }
 .note.mx { margin: 14px 18px 0; }
 .cover.rs { width: 64px; height: 88px; aspect-ratio: auto; border-radius: 12px; }
 .an-res .rs-t { font-weight: 700; font-size: 15px; }
+
+/* ===== Top 10 (sama dengan Ninokuu Manga) ===== */
+.cf { --cw: min(60vw, 236px); display: flex; gap: 10px; overflow: hidden; touch-action: pan-y pinch-zoom; -webkit-user-select: none; user-select: none;
+  /* ruang atas/bawah untuk mahkota & cahaya kartu tengah (area gulir memotong apa pun di luar padding) */
+  padding: 40px calc(50% - var(--cw) / 2) 34px; margin: -14px 0 -18px; overscroll-behavior-x: contain; }
+.cf::-webkit-scrollbar { display: none; }
+/* kartu sudah dimuat: tidak lagi barisan bergulir, tiap kartu ditumpuk di tengah lalu ditempatkan lewat transform */
+.cf.cfx { display: block; position: relative; padding: 0; height: calc(var(--cw) * 1.425 + 78px); }
+.cf.cfx .cf-card { position: absolute; top: 40px; left: calc(50% - var(--cw) / 2); will-change: transform; }
+.cf-sk { flex: none; width: var(--cw); aspect-ratio: 2 / 2.85; border-radius: 22px; }
+.cf-sk:not(:first-child) { transform: scale(.85); opacity: .5; }
+.cf-card { --rc: rgba(255, 255, 255, .5); --rg: rgba(255, 255, 255, .12); position: relative; flex: none; width: var(--cw); -webkit-user-drag: none;
+  transform-origin: 50% 60%; transform: scale(.85); opacity: .5; -webkit-tap-highlight-color: transparent; }
+.cf-card.r1 { --rc: #F2B33D; --rg: rgba(242, 179, 61, .45); --rt: #2A1600; --r1: #FFE9A3; --r3: #B9771A; }
+.cf-card.r2 { --rc: #C9D0DC; --rg: rgba(201, 208, 220, .32); --rt: #2B3140; --r1: #FFFFFF; --r3: #7E8798; }
+.cf-card.r3 { --rc: #D08A4E; --rg: rgba(208, 138, 78, .36); --rt: #2A1200; --r1: #FFD3A8; --r3: #8C4F22; }
+.cf-in { position: relative; z-index: 1; display: block; aspect-ratio: 2 / 2.85; border-radius: 22px; overflow: hidden; background: var(--s1);
+  border: 2px solid transparent; transition: border-color .25s; }
+.cf-card.on .cf-in { border-color: var(--rc); }
+/* cahaya kartu tengah: lapisan terpisah yang hanya berubah opacity (murah), bukan box-shadow yang dianimasikan */
+.cf-card::before { content: ""; position: absolute; z-index: 0; left: 0; right: 0; top: 0; aspect-ratio: 2 / 2.85; border-radius: 22px;
+  box-shadow: 0 10px 26px var(--rg), 0 0 18px var(--rg); opacity: 0; transition: opacity .25s; pointer-events: none; }
+.cf-card.on::before { opacity: 1; }
+.cf-card img { -webkit-user-drag: none; pointer-events: none; }
+.cf-in .cover.cf { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 0; aspect-ratio: auto; }
+.cf-shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .28) 0, transparent 26%, transparent 46%, rgba(5, 8, 14, .78) 76%, rgba(5, 8, 14, .94)); pointer-events: none; }
+.cf-rank { position: absolute; z-index: 2; left: 10px; top: 10px; min-width: 30px; height: 30px; padding: 0 6px; border-radius: 9px; display: grid; place-items: center;
+  font-size: 15px; font-weight: 900; color: #fff; background: rgba(12, 13, 18, .78); border: 1px solid rgba(255, 255, 255, .16); }
+.cf-card.r1 .cf-rank, .cf-card.r2 .cf-rank, .cf-card.r3 .cf-rank { color: var(--rt); background: linear-gradient(160deg, var(--r1), var(--rc) 55%, var(--r3)); border-color: var(--r1); }
+.cf-in .cv-score { top: 10px; right: 10px; }
+.cf-info { position: absolute; z-index: 2; left: 14px; right: 14px; bottom: 13px; display: flex; flex-direction: column; gap: 6px; }
+.cf-t { font-size: 15px; line-height: 1.3; font-weight: 800; color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, .6);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cf-stars { font-size: 14px; letter-spacing: 1px; line-height: 1; width: max-content;
+  background: linear-gradient(90deg, var(--gold) var(--p), rgba(255, 255, 255, .28) var(--p)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cf-sub { font-size: 12px; color: rgba(255, 255, 255, .7); }
+.cf-crown { position: absolute; z-index: 3; left: 50%; top: -27px; width: 44px; height: 36px; transform: translateX(-50%); pointer-events: none; opacity: 0; transition: opacity .25s; }
+.cf-crown .t10-crown { position: static; width: 44px; height: 36px; transform: none; }
+.cf-card.on .cf-crown { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .cf-in, .cf-crown, .cf-card::before { transition: none; } }
+.cf-in .cover.cf img { will-change: transform; }
+.cf .cv-score { position: absolute; z-index: 2; }
+
+/* ===== pilihan bersegmen: jempol meluncur (sama dengan Ninokuu, lihat ui.js) ===== */
+/* pilihan bersegmen gaya iOS: jempol meluncur (lihat ui.js) */
+:where(.seg, .fseg, .chips) { position: relative; }   /* tanpa bobot: aturan sticky/fixed milik halaman (mis. tab Level) tetap menang */
+.seg-th { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; background: var(--red); box-shadow: 0 3px 10px rgba(224, 36, 43, .32); will-change: transform;
+  transform-origin: 0 0; transition: transform .45s cubic-bezier(.32, .72, 0, 1), opacity .15s; }
+.seg-th.no-tr { transition: none; }
+.has-th > button { position: relative; z-index: 1; }
+.seg.has-th > button[aria-selected="true"], .fseg.has-th > button[aria-checked="true"] { background: transparent; box-shadow: none; }
+.chips > .seg-th { background: var(--tx); box-shadow: none; }
+.chips.has-th > button[aria-pressed="true"] { background: transparent; border-color: transparent; }
+.seg button:active, .fseg button:active, .chips button:active { scale: .96; }
+/* latar pilihan aktif = jempol; tombol sendiri tidak memudar latar/garisnya (itu yang tampak sebagai garis/stroke saat meluncur) */
+.seg button, .fseg button, .chips button { transition: color .32s ease, scale .1s ease; }
+/* chip tanpa garis tepi (garis tepi tergambar di atas jempol yang lewat); diganti isian tipis */
+.chips button { border-color: transparent; background: rgba(255, 255, 255, .06); }
+.chips.has-th > button[aria-pressed="true"] { background: transparent; }
+@media (prefers-reduced-motion: reduce) { .seg-th { transition: none; } }
+.seg > button.seg-pre, .fseg > button.seg-pre { color: var(--mu) !important; transition: none !important; }
+.chips > button.seg-pre { color: var(--tx) !important; transition: none !important; }
+.fv-chips > .seg-th { background: var(--red); }
+.fv-chips.has-th > button[aria-pressed="true"] { background: transparent; border-color: transparent; color: #fff; }
+
+/* ===== Jadwal satu minggu bergulir ===== */
+.jd-sec { scroll-margin-top: 120px; }
+/* hari terakhir cukup tinggi supaya bisa digulir sampai menempel di bawah bilah tanggal (ketuk Sabtu / buka hari Sabtu) */
+.jd-sec:last-child { min-height: calc(100vh - var(--jdb, 140px) - 110px - env(safe-area-inset-bottom)); }
+.jd-sh { position: sticky; top: calc(var(--jdb, calc(var(--sat) + 84px)) - 1px); z-index: 4; display: flex; align-items: baseline; gap: 8px; padding: 14px 18px 8px; margin-top: 6px;
+  background: linear-gradient(var(--bg) 78%, rgba(11, 16, 24, 0)); }
+.jd-sh b { font: 400 26px/1 var(--serif); }
+.jd-sec.is-today .jd-sh b { color: var(--gold); }
+.jd-empty { padding: 4px 18px 18px; }
+.jd-empty::before { display: none; }
+.jd-sec + .jd-sec { border-top: 1px solid rgba(255, 255, 255, .05); }
+.jd-today { position: fixed; z-index: 8; left: 50%; bottom: calc(14px + 68px + 18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border-radius: 999px; background: var(--red); color: #fff; font-size: 13.5px; font-weight: 800; box-shadow: 0 10px 26px rgba(224, 36, 43, .45); animation: anIn .3s ease-out both; }
+.jd-today[hidden] { display: none; }
+body.ap-mini .jd-today { bottom: calc(14px + 68px + 10px + 70px + 12px + env(safe-area-inset-bottom)); }
+body.short .jd-today { bottom: calc(8px + 52px + 16px + env(safe-area-inset-bottom)); }
+body.short.ap-mini .jd-today { bottom: calc(8px + 52px + 8px + 70px + 12px + env(safe-area-inset-bottom)); }
+.jd-today svg { transform: rotate(-90deg); transition: transform .25s; }
+.jd-today.up svg { transform: rotate(90deg); }
+.jd-today:active { scale: .96; }

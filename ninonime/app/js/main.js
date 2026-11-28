@@ -14,13 +14,15 @@ import { vPage } from "./pages.js";
 
 /* ---------- router ---------- */
 // #/home  #/jadwal  #/cari  #/favorit  #/akun  #/anime/<id>  #/admin  #/p/<halaman> (turunan Akun)
-let route = { name: "home", params: [] }, prevName = "home", cleanup = null, navDepth = 0;
+let route = { name: "home", params: [] }, prevName = "home", cleanup = null, navDepth = 0, ownScroll = false, returning = false;
 const scrollMem = new Map();
 const DEPTH = { home: 0, jadwal: 0, cari: 0, favorit: 0, akun: 0, anime: 1, admin: 1, p: 1 };
 const parse = () => { const p = (location.hash.replace(/^#\/?/, "").split("?")[0] || "home").split("/").map(decodeURIComponent); return { name: p[0], params: p.slice(1) }; };
 const back = (fallback = "#/home") => (navDepth > 0 ? history.back() : goReplace(fallback));
 const ctx = () => ({
   topbar, setActs, go, back, loading, setCleanup: (f) => { cleanup = f; },
+  // halaman yang mengatur gulirnya sendiri (Jadwal): router tidak memulihkan posisi; savedY = posisi terakhir bila kembali dari halaman turunan
+  keepScroll: () => { ownScroll = true; }, savedY: returning ? scrollMem.get(route.name + route.params.join("/")) || 0 : 0,
   topRight: `<a class="gl-btn" href="#/cari" aria-label="Cari">${icon("search", 20)}</a><a class="gl-btn" href="#/akun" aria-label="Akun">${icon("user", 20)}</a>`,
 });
 
@@ -47,6 +49,7 @@ async function render() {
   const depth = DEPTH[route.name] ?? 0, prevDepth = DEPTH[prevName] ?? 0;
   navDepth = depth > 0 ? navDepth + (prevDepth < depth ? 1 : 0) : 0;
   const fwd = depth !== prevDepth ? depth > prevDepth : TABS.indexOf(route.name) >= TABS.indexOf(prevName);
+  returning = prevDepth > depth; ownScroll = false;
   prevName = route.name;
   document.body.dataset.screen = route.name;
   const authOnly = !api.currentUser();   // belum masuk: halaman login murni, tanpa bar bawah
@@ -57,6 +60,7 @@ async function render() {
   const job = !OPEN.has(route.name) && !AN.hasAccess() ? (gate(), null) : VIEWS[route.name](...route.params);
   void view.offsetWidth; view.classList.add("in", fwd ? "in-f" : "in-b");
   await job;
+  if (ownScroll) return;
   const y = scrollMem.get(route.name + route.params.join("/"));
   requestAnimationFrame(() => window.scrollTo(0, y || 0));
 }

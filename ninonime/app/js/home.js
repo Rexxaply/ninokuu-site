@@ -8,57 +8,100 @@ import { aHref, acard, acv, errHtml, fmtScore, hist, skCards } from "./lib.js";
 
 // --- Top 10: carousel melingkar. Kartu tengah lebih besar (mahkota + bingkai emas), kiri/kanan mengecil & redup.
 // Bergeser sendiri tiap 3,5 dtk (berhenti saat disentuh / di luar layar), bisa digeser jari, dan berputar terus.
-const CROWN_SVG = '<svg class="tc-crown" viewBox="0 0 64 44" aria-hidden="true"><defs><linearGradient id="tcg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#E39B1B"/></linearGradient></defs><path d="M6 14l13 11L32 4l13 21 13-11-6 26H12z" fill="url(#tcg)" stroke="#8A5A0B" stroke-width="2" stroke-linejoin="round"/><circle cx="32" cy="29" r="4" fill="#E0242B"/></svg>';
+const CROWN = `<svg class="t10-crown" viewBox="0 0 64 52" aria-hidden="true"><defs><linearGradient id="crG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE9A3"/><stop offset=".55" stop-color="#F2B33D"/><stop offset="1" stop-color="#B9771A"/></linearGradient></defs>
+<path d="M6 40 2 12l16 12L32 4l14 20 16-12-4 28Z" fill="url(#crG)" stroke="#7A4A0E" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="5" y="39" width="54" height="9" rx="3" fill="url(#crG)" stroke="#7A4A0E" stroke-width="2.4"/>
+<circle cx="32" cy="27" r="4.2" fill="#E0242B" stroke="#7A0E12" stroke-width="1.4"/><circle cx="17" cy="31" r="3" fill="#5AA9FF" stroke="#13406E" stroke-width="1.2"/><circle cx="47" cy="31" r="3" fill="#5DD39E" stroke="#12603E" stroke-width="1.2"/>
+<circle cx="2" cy="12" r="3" fill="#FFE9A3" stroke="#7A4A0E" stroke-width="1.6"/><circle cx="32" cy="4" r="3.4" fill="#FFE9A3" stroke="#7A4A0E" stroke-width="1.6"/><circle cx="62" cy="12" r="3" fill="#FFE9A3" stroke="#7A4A0E" stroke-width="1.6"/></svg>`;
+
+/* Top 10: carousel tengah seperti Ninokuu Manga (kartu ikut jari, meluncur ke kartu terdekat, parallax sampul,
+   berputar tanpa ujung) + tetap berganti otomatis tiap 3,5 detik (berhenti sebentar setelah disentuh). */
 function carousel(root, list, extraCleanup) {
   const n = list.length;
-  let cur = 0, timer = 0, hidden = false, drag = null;
-  root.innerHTML = `<div class="tc-track">${list.map((a, i) => `<a class="tc-it" href="${aHref(a.id)}" data-i="${i}" aria-label="Peringkat ${i + 1}: ${esc(a.title)}">
-    <span class="tc-cv">${acv(a.cover, a.title)}<span class="tc-shade"></span><span class="tc-rank">${i + 1}</span>${fmtScore(a.score) ? `<span class="cv-score">${icon("star", 10, 2)}${fmtScore(a.score)}</span>` : ""}
-      <span class="tc-cap"><b>${esc(a.title)}</b><span class="tc-stars" style="--s:${Math.max(0, Math.min(5, (Number(a.score) || 0) / 2)).toFixed(2)}" aria-label="Skor ${fmtScore(a.score) || "-"}"></span></span></span>${i === 0 ? CROWN_SVG : ""}</a>`).join("")}</div>
-    <div class="tc-dots" aria-hidden="true">${list.map((_, i) => `<i data-i="${i}"></i>`).join("")}</div>`;
-  const items = $$(".tc-it", root), dots = $$(".tc-dots i", root);
-  // posisi relatif terhadap kartu tengah, dibungkus melingkar: -n/2 .. n/2
-  const rel = (i, c) => { let d = (i - c) % n; if (d > n / 2) d -= n; if (d < -n / 2) d += n; return d; };
-  let prev = null;
-  const layout = (dx = 0) => {
-    items.forEach((el, i) => {
-      const d = rel(i, cur), was = prev ? rel(i, prev) : d;
-      // kartu yang melompat dari ujung kiri ke ujung kanan (atau sebaliknya) dipindah tanpa animasi supaya tidak melintas
-      el.style.transition = Math.abs(d - was) > 1.5 || drag ? "none" : "";
-      el.style.setProperty("--d", d); el.style.setProperty("--dx", dx + "px");
-      el.classList.toggle("on", d === 0); el.setAttribute("tabindex", Math.abs(d) <= 1 ? "0" : "-1");
-      el.setAttribute("aria-hidden", String(Math.abs(d) > 2));
-    });
-    dots.forEach((dt, i) => dt.classList.toggle("on", i === cur));
-    const crown = $(".tc-crown", root); if (crown && crown.parentElement !== items[cur]) items[cur].append(crown);
-    const lab = $("#tcN"); if (lab) lab.textContent = `#${cur + 1} dari ${n}`;
-    prev = cur;
+  root.innerHTML = list.map((a, i) => { const sc = Number(a.score);
+    return `<a class="cf-card ${i < 3 ? "r" + (i + 1) : ""}" href="${aHref(a.id)}" aria-label="Peringkat ${i + 1}: ${esc(a.title)}">
+      ${i === 0 ? `<span class="cf-crown">${CROWN}</span>` : ""}<span class="cf-in">${acv(a.cover, a.title, "cf")}<span class="cf-shade"></span>
+      <span class="cf-rank" aria-hidden="true">${i + 1}</span>${fmtScore(a.score) ? `<span class="cv-score">${icon("star", 10, 2)}${fmtScore(a.score)}</span>` : ""}
+      <span class="cf-info"><b class="cf-t">${esc(a.title)}</b>${sc > 0 ? `<span class="cf-stars" style="--p:${Math.round(sc * 10)}%" aria-hidden="true">★★★★★</span>` : `<span class="cf-sub">${esc(a.type || "")}</span>`}</span></span></a>`; }).join("");
+  const box = root, cards = [...box.querySelectorAll(".cf-card")], loop = n >= 4 ? n : 0;
+  box.classList.add("cfx");
+  const short = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let step = 0, pos = 0, on = null, anim = 0, drag = null, moved = false, timer = 0, hidden = false, pauseUntil = 0;
+  const pics = cards.map((c) => c.querySelector(".cf-in .cover img")), PX = short ? 0 : 0.08;
+  const measure = () => { step = (cards[0].offsetWidth || 200) + 10; };
+  const off = (k) => { let d = k - pos; if (loop) { d = ((d % n) + n) % n; if (d > n / 2) d -= n; } return d; };
+  const tick = () => {
+    if (!step) measure();
+    for (let k = 0; k < n; k++) {
+      const el = cards[k], d = off(k), a = Math.abs(d);
+      if (a > 2.6) { if (el.style.visibility !== "hidden") el.style.visibility = "hidden"; continue; }
+      el.style.visibility = "";
+      const m = Math.min(1, a);
+      el.style.transform = `translate3d(${(d * step).toFixed(2)}px,0,0) scale(${(1 - m * 0.15).toFixed(4)})`;
+      el.style.opacity = (1 - m * 0.5).toFixed(3); el.style.zIndex = String(10 - Math.round(a * 2));
+      const pic = pics[k]; if (pic && PX) pic.style.transform = `translate3d(${(-Math.max(-1.3, Math.min(1.3, d)) * PX * (step - 10)).toFixed(1)}px,0,0) scale(1.24)`;
+    }
+    const i = loop ? ((Math.round(pos) % n) + n) % n : Math.max(0, Math.min(n - 1, Math.round(pos)));
+    const best = cards[i];
+    if (best !== on) { on?.classList.remove("on"); best.classList.add("on"); on = best; const lab = $("#tcN"); if (lab) lab.textContent = `#${i + 1} dari ${n}`; }
   };
-  const goTo = (c) => { cur = (c + n) % n; layout(); };
-  const auto = () => { clearInterval(timer); timer = setInterval(() => { if (!hidden && !drag && document.visibilityState === "visible") goTo(cur + 1); }, 3500); };
-  root.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, dx: 0, moved: false, id: e.pointerId }; });
-  root.addEventListener("pointermove", (e) => {
-    if (!drag) return; drag.dx = e.clientX - drag.x;
-    if (!drag.moved && Math.abs(drag.dx) > 8 && Math.abs(drag.dx) > Math.abs(e.clientY - drag.y)) { drag.moved = true; try { root.setPointerCapture(drag.id); } catch {} }
-    if (drag.moved) layout(drag.dx);
-  });
-  const up = () => {
-    if (!drag) return; const d = drag; drag = null;
-    if (d.moved) { root.dataset.justDragged = "1"; setTimeout(() => delete root.dataset.justDragged, 60); const step = Math.abs(d.dx) > 40 ? (d.dx < 0 ? 1 : -1) * Math.max(1, Math.round(Math.abs(d.dx) / 160)) : 0; goTo(cur + step); }
-    auto();
+  const norm = () => { if (loop) pos = ((pos % n) + n) % n; };
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  const glide = (to) => {
+    cancelAnimationFrame(anim);
+    if (!loop) to = Math.max(0, Math.min(n - 1, to));
+    const from = pos, dist = to - from;
+    if (Math.abs(dist) < 0.002) { pos = to; norm(); tick(); return; }
+    const t0 = performance.now(), dur = short ? 140 : Math.min(620, Math.max(300, 420 * Math.min(1.6, Math.abs(dist))));
+    const frame = (t) => { const k = Math.min(1, (t - t0) / dur); pos = from + dist * ease(k); tick(); if (k < 1) anim = requestAnimationFrame(frame); else { anim = 0; pos = to; norm(); tick(); } };
+    anim = requestAnimationFrame(frame);
   };
-  root.addEventListener("pointerup", up); root.addEventListener("pointercancel", up);
-  // ketuk kartu samping → kartu itu ke tengah (bukan langsung dibuka); kartu tengah → buka info anime
-  root.addEventListener("click", (e) => {
-    const a = e.target.closest(".tc-it"); if (!a) return;
-    if (root.dataset.justDragged) { e.preventDefault(); return; }
-    if (!a.classList.contains("on")) { e.preventDefault(); goTo(+a.dataset.i); auto(); }
-    else rememberCover(a.querySelector(".cover"));
+  const hold = () => { pauseUntil = performance.now() + 6000; };   // disentuh: pergantian otomatis menunggu dulu
+  const start = (x, y) => { cancelAnimationFrame(anim); anim = 0; drag = { x, y, p: pos, h: false, v: false, pts: [[x, performance.now()]] }; moved = false; hold(); };
+  const move = (x, y, e) => {
+    if (!drag || drag.v) return;
+    const dx = x - drag.x, dy = y - drag.y;
+    if (!drag.h) {
+      if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
+      if (Math.abs(dx) < Math.abs(dy) * 0.85) { drag.v = true; return; }
+      drag.h = true; moved = true; drag.x = x; drag.p = pos;
+    }
+    if (e?.cancelable) e.preventDefault();
+    let p = drag.p - (x - drag.x) / step;
+    if (!loop) p = p < 0 ? p / 3 : p > n - 1 ? n - 1 + (p - n + 1) / 3 : p;
+    pos = p; tick();
+    drag.pts.push([x, performance.now()]); if (drag.pts.length > 6) drag.pts.shift();
+  };
+  const release = () => {
+    if (!drag) return;
+    const d = drag; drag = null; hold();
+    if (!d.h) { if (anim === 0 && pos !== Math.round(pos)) glide(Math.round(pos)); return; }
+    const [a, b] = [d.pts[0], d.pts[d.pts.length - 1]], v = (b[0] - a[0]) / Math.max(1, b[1] - a[1]);
+    let i = Math.abs(v) > 0.35 ? (v < 0 ? Math.floor(pos) + 1 : Math.ceil(pos) - 1) : Math.round(pos);
+    if (Math.abs(v) > 1.4) i += v < 0 ? 1 : -1;
+    glide(i);
+  };
+  box.addEventListener("touchstart", (e) => { if (e.touches.length !== 1) { drag = null; return; } const t = e.touches[0]; start(t.clientX, t.clientY); }, { passive: true });
+  box.addEventListener("touchmove", (e) => { if (e.touches.length !== 1) return; const t = e.touches[0]; move(t.clientX, t.clientY, e); }, { passive: false });
+  box.addEventListener("touchend", release); box.addEventListener("touchcancel", release);
+  box.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || e.button > 0) return; start(e.clientX, e.clientY); try { box.setPointerCapture(e.pointerId); } catch {} });
+  box.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse") move(e.clientX, e.clientY, e); });
+  box.addEventListener("pointerup", (e) => { if (e.pointerType === "mouse") release(); });
+  box.addEventListener("dragstart", (e) => e.preventDefault());
+  box.addEventListener("click", (e) => {
+    if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; return; }
+    const c = e.target.closest(".cf-card"); if (!c) return;
+    if (c.classList.contains("on")) { rememberCover(c.querySelector(".cover")); return; }
+    e.preventDefault(); hold(); glide(pos + Math.round(off(cards.indexOf(c))));
   });
+  const onResize = () => { if (!box.isConnected) return; measure(); tick(); };
+  addEventListener("resize", onResize, { passive: true });
+  // berganti otomatis: hanya saat terlihat di layar, aplikasi terbuka, dan tidak sedang disentuh
+  timer = setInterval(() => { if (!hidden && !drag && !anim && document.visibilityState === "visible" && performance.now() > pauseUntil) glide(Math.round(pos) + 1); }, 3500);
   const io = new IntersectionObserver((es) => { hidden = !es[0].isIntersecting; }, { threshold: 0.3 });
-  io.observe(root);
-  layout(); auto();
-  return () => { clearInterval(timer); io.disconnect(); extraCleanup?.(); };
+  io.observe(box);
+  measure(); tick();
+  return () => { clearInterval(timer); cancelAnimationFrame(anim); io.disconnect(); removeEventListener("resize", onResize); extraCleanup?.(); };
 }
 
 // --- Beranda anime ---
@@ -76,7 +119,7 @@ ${last ? `<section class="sec s16"><h2 class="cap">Lanjut nonton</h2>
       <span class="prog"><span style="width:${last.dur ? Math.max(4, Math.round((last.t / last.dur) * 100)) : 6}%"></span></span></span>
     <span class="play">${icon("play", 19, 2)}</span></a></section>` : ""}
 <section class="sec s24 nox"><div class="sec-h px"><h2>Tayang hari ini</h2><a class="link-red" href="#/jadwal">Lihat jadwal</a></div><div class="hs an-today" id="today">${`<span class="an-tm"><span class="sk an-tm-sk"></span></span>`.repeat(4)}</div></section>
-<section class="sec s26 nox"><div class="sec-h px"><h2>Top 10 sedang tayang</h2><span class="mu sm" id="tcN"></span></div><div class="tc" id="atop"><div class="tc-track"><span class="tc-it sk" style="--d:0"></span><span class="tc-it sk" style="--d:-1"></span><span class="tc-it sk" style="--d:1"></span></div></div></section>
+<section class="sec s26 nox"><div class="sec-h px"><h2>Top 10 sedang tayang</h2><span class="mu sm" id="tcN"></span></div><div class="cf" id="atop"><div class="cf-sk sk"></div><div class="cf-sk sk"></div><div class="cf-sk sk"></div></div></section>
 <section class="sec s26"><div class="sec-h"><h2>Musim ini</h2><span class="mu sm" id="seasonN"></span></div><div id="season">${skCards(6)}</div>
   <button class="more-auto" id="aMore" hidden><span class="spin-s" aria-hidden="true"></span>Memuat lainnya…</button></section>
 <div class="pad-nav"></div>`;

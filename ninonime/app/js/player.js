@@ -43,7 +43,7 @@ export const player = (() => {
     stopMedia();
     const m = media();
     if (!src) {
-      m.innerHTML = `<div class="ap-empty" style="--bg:url('${esc(poster || "")}')"><span>${icon("tv", 30, 1.8)}</span><b>Video episode ${ep} belum tersedia</b><i>Sumber video untuk episode ini belum ada (js/sources.js).${cur?.trailer ? " Trailer bisa diputar." : ""}</i>${cur?.trailer ? `<button class="btn ghost" data-p="trailer">${icon("play", 16, 2)}Putar trailer</button>` : ""}</div>`;
+      m.innerHTML = `<div class="ap-empty" style="--bg:url('${esc(poster ? new URL(poster, location.href).href : "")}')"><span>${icon("tv", 30, 1.8)}</span><b>Video episode ${ep} belum tersedia</b><i>Sumber video untuk episode ini belum ada (js/sources.js).${cur?.trailer ? " Trailer bisa diputar." : ""}</i>${cur?.trailer ? `<button class="btn ghost" data-p="trailer">${icon("play", 16, 2)}Putar trailer</button>` : ""}</div>`;
       syncPP(); return;
     }
     if (src.kind === "yt") {
