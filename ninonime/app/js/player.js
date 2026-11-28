@@ -1,6 +1,8 @@
 // NinoNime · modul anime/player (dipecah dari anime.js)
-import { esc, icon, $, $$ } from "./ui.js";
+import { esc, icon, $, $$, toast } from "./ui.js";
 import { episodeSource } from "./sources.js";
+import { mountControls, prefs, setPref, SPEEDS } from "./vctl.js";
+import * as api from "./api.js";
 import { aHref, acv, hist, saveHist } from "./lib.js";
 
 // layar penuh status bar (APK/Capacitor) bisa disambungkan di sini; di PWA cukup Fullscreen API
@@ -16,7 +18,7 @@ const setFullscreen = async () => {};
 // Sumber video episode: lihat js/sources.js
 
 export const player = (() => {
-  let root = null, st = "closed", cur = null, ep = 0, list = [], yt = null, ytState = -1, vid = null;
+  let root = null, st = "closed", cur = null, ep = 0, list = [], yt = null, ytState = -1, vid = null, ctl = null, src0 = null, srvI = 0;
   const build = () => {
     root = document.createElement("div");
     root.className = "ap"; root.hidden = true;
@@ -32,6 +34,7 @@ export const player = (() => {
 </div>`;
     document.body.append(root);
     root.addEventListener("click", onClick);
+    root.addEventListener("change", onSetting);
     bindDrag();
     window.addEventListener("message", onYtMsg);
   };
@@ -52,18 +55,58 @@ export const player = (() => {
       yt = $("iframe", m); ytState = -1;
       yt.addEventListener("load", () => { try { yt.contentWindow.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*"); } catch {} });
     } else {
-      m.innerHTML = `<video class="ap-v" playsinline autoplay controls preload="metadata" ${poster ? `poster="${esc(poster)}"` : ""}></video>`;
-      vid = $("video", m); vid.src = src.url;
+      // pemutar kustom: tanpa kontrol bawaan browser, kontrol NinoNime di atas video (js/vctl.js)
+      m.innerHTML = `<video class="ap-v" playsinline autoplay preload="metadata" ${poster ? `poster="${esc(poster)}"` : ""}></video>`;
+      vid = $("video", m);
+      src0 = src; const svs = src.servers?.length ? src.servers : [{ name: "Server 1", url: src.url }];
+      srvI = Math.min(svs.length - 1, Math.max(0, Number(api.lsGet("playerServer", 0)) || 0));
+      vid.src = svs[srvI].url;
+      const myVid = vid, epNow = ep;
+      ctl = mountControls(m, vid, {
+        intro: src.intro, endingFromEnd: src.endingFromEnd,
+        hasNext: () => !!(ep && (!cur.eps || ep < cur.eps)),
+        onNext: () => { if (vid === myVid && ep === epNow) go(ep + 1); },
+        // server gagal dimuat → coba server berikutnya otomatis
+        onError: () => { if (vid !== myVid) return; if (srvI + 1 < svs.length) { toast(`${svs[srvI].name} gagal dimuat, pindah ke ${svs[srvI + 1].name}`); setServer(srvI + 1); } else toast("Video gagal dimuat di semua server."); },
+      });
+      drawSettings();
       const h = hist().find((y) => y.id === cur.id && Number(y.ep) === ep);
       vid.addEventListener("loadedmetadata", () => { if (h?.t > 5 && h.t < vid.duration - 10) vid.currentTime = h.t; }, { once: true });
       let lastSave = 0;
       vid.addEventListener("timeupdate", () => { const b = $(".ap-bar i", root); if (b && vid.duration) b.style.width = (vid.currentTime / vid.duration) * 100 + "%"; if (Date.now() - lastSave > 5000) { lastSave = Date.now(); saveHist(cur, ep, vid.currentTime, vid.duration); } });
       vid.addEventListener("play", syncPP); vid.addEventListener("pause", syncPP);
-      vid.addEventListener("ended", () => { if (ep && (!cur.eps || ep < cur.eps)) setTimeout(() => go(ep + 1), 800); });
     }
     syncPP();
   }
-  function stopMedia() { if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
+  // pindah server: posisi & status putar dipertahankan
+  function setServer(i) {
+    if (!vid || !src0) return; const svs = src0.servers || []; if (!svs[i]) return;
+    const t = vid.currentTime, playing = !vid.paused; srvI = i; api.lsSet("playerServer", i);
+    vid.src = svs[i].url;
+    vid.addEventListener("loadedmetadata", () => { if (t > 1) vid.currentTime = t; if (playing) vid.play().catch(() => {}); }, { once: true });
+    drawSettings();
+  }
+  // pengaturan di bawah video: server (dropdown), kecepatan, lewati ending otomatis, episode berikutnya otomatis
+  function drawSettings() {
+    const box = root && $(".ap-set", root); if (!box) return;
+    if (!vid || !src0) { box.innerHTML = ""; return; }
+    const svs = src0.servers?.length ? src0.servers : [{ name: "Server 1", url: src0.url }], p = prefs();
+    const sw = (k, t, sub) => `<label class="ps-row ps-sw"><span class="ps-l"><b>${t}</b><span>${sub}</span></span><input type="checkbox" role="switch" data-ps="${k}" ${p[k] ? "checked" : ""}><i class="ps-tg" aria-hidden="true"></i></label>`;
+    box.innerHTML = `<div class="ps">
+      <label class="ps-row"><span class="ps-l"><b>Server</b><span>Ganti bila lambat atau gagal</span></span><span class="ps-sel"><select data-ps="server" aria-label="Server">${svs.map((s, i) => `<option value="${i}" ${i === srvI ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
+      <label class="ps-row"><span class="ps-l"><b>Kecepatan</b><span>Kecepatan putar video</span></span><span class="ps-sel"><select data-ps="speed" aria-label="Kecepatan">${SPEEDS.map((v) => `<option value="${v}" ${v === p.speed ? "selected" : ""}>${v === 1 ? "Normal" : v + "×"}</option>`).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
+      ${sw("autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai")}
+      ${sw("autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai")}
+      ${src0.demo ? `<p class="ps-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0).</p>` : ""}</div>`;
+  }
+  function onSetting(e) {
+    const t = e.target.closest?.("[data-ps]"); if (!t) return;
+    const k = t.dataset.ps;
+    if (k === "server") setServer(Number(t.value));
+    else if (k === "speed") { setPref("speed", Number(t.value)); if (vid) vid.playbackRate = Number(t.value); }
+    else setPref(k, t.checked);
+  }
+  function stopMedia() { ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
   const ytCmd = (func) => { try { yt?.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*"); } catch {} };
   function onYtMsg(e) {
     if (!yt || e.source !== yt.contentWindow) return;
@@ -90,9 +133,11 @@ export const player = (() => {
     <button class="pill-btn" data-p="next" ${ep && (!a.eps || ep < a.eps) && (!n || ep < n) ? "" : "disabled"}>Berikutnya${icon("next", 16, 2)}</button>
     ${a.trailer ? `<button class="pill-btn" data-p="trailer">${icon("tv", 16, 2)}Trailer</button>` : ""}
     <button class="pill-btn" data-p="info">${icon("info", 16, 2)}Info</button></div>
+  <div class="ap-set"></div>
   ${a.synopsis ? `<p class="ap-syn">${esc(a.synopsis.slice(0, 360))}${a.synopsis.length > 360 ? "…" : ""}</p>` : ""}
   ${n ? `<div class="sec-h"><h2>Daftar episode</h2><span class="mu sm">${n} episode</span></div><div class="ep-grid">${Array.from({ length: n }, (_, i) => `<button class="ep-b${i + 1 === ep ? " on" : ""}" data-p="ep" data-v="${i + 1}">${i + 1}</button>`).join("")}</div>` : ""}
   <div style="height:calc(40px + env(safe-area-inset-bottom))"></div>`;
+    drawSettings();
     requestAnimationFrame(() => $(".ap-info .ep-b.on", root)?.scrollIntoView({ block: "nearest", inline: "center" }));
   }
   async function go(n) {
@@ -203,7 +248,7 @@ export const player = (() => {
       if (fs || e.touches.length > 1) return;
       const inBody = body.contains(e.target);
       if (st === "full" && inBody && body.scrollTop > 0) return;
-      if (e.target.closest("iframe, video")) return;
+      if (e.target.closest("iframe, video, .vc-seek, .vc-b, .vc-skip, .vc-next, .ap-set")) return;
       y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = dx = 0; t0 = Date.now(); on = true; axis = "";
     }, { passive: true });
     sh.addEventListener("touchmove", (e) => {
