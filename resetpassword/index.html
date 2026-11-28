@@ -6,7 +6,7 @@
 <title>Buat password baru · Ninokuu</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0B1018">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://ocersqyrztzegwzjvvoh.supabase.co; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src https://panel.ninokuu.site https://ocersqyrztzegwzjvvoh.supabase.co; form-action 'none'; base-uri 'none'">
 <link rel="icon" href="../favicon.png">
 <style>
   :root { --bg: #0B1018; --s1: #141B27; --line: #273244; --tx: #F2F4F8; --mu: #A3ACBD; --red: #E0242B; --ok: #5DD39E; }
@@ -35,7 +35,7 @@
   label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 700; color: var(--mu); }
   input { min-height: 52px; padding: 0 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--s1); color: var(--tx); font: inherit; font-size: 16px; }
   input:focus { outline: 2px solid var(--red); outline-offset: 1px; }
-  .show { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--mu); }
+  .show { display: flex; flex-direction: row; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--mu); }
   .show input { min-height: 0; width: 18px; height: 18px; accent-color: var(--red); }
   .err-t { min-height: 18px; color: #ff6b70; font-size: 13px; font-weight: 600; }
   button.btn { border: 0; font-family: inherit; cursor: pointer; }
@@ -53,7 +53,7 @@
   <p id="msg">Masukkan password baru untuk akun Ninokuu-mu.</p>
   <form id="f" hidden novalidate>
     <label>Password baru<input id="pw" type="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="Minimal 8 karakter" required></label>
-    <label>Ulangi password baru<input id="pw2" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></label>
+    <label>Ulangi password baru<input id="pw2" type="password" minlength="8" maxlength="72" autocomplete="new-password" placeholder="Ketik ulang password" required></label>
     <label class="show"><input type="checkbox" id="sh">Tampilkan password</label>
     <span class="err-t" id="e" role="alert"></span>
     <button class="btn" id="save" type="submit" style="margin-top:4px">Simpan password</button>
@@ -68,11 +68,23 @@
 <script>
   // Tautan "lupa password" dari Supabase membawa token sekali pakai di alamat (#access_token=…&type=recovery).
   // Token hanya disimpan di memori halaman ini, langsung dihapus dari alamat, dan dicabut lagi setelah password disimpan.
-  const SB = "https://ocersqyrztzegwzjvvoh.supabase.co", KEY = "sb_publishable_RsXtbJpTDEISJ-q6pKeXdg_oiYaVQa9";
+  // Dua server: utama (sendiri) dan cadangan (Cloud). Tautan email datang dari server yang mengirimnya, jadi server dipilih
+  // dari penerbit token (klaim "iss" di JWT). Token tidak diverifikasi di sini: server tujuan yang menolaknya bila palsu.
+  const SERVERS = [
+    { url: "https://panel.ninokuu.site", key: "sb_publishable_uXYQxNec4Lp46GcWlm2phf_5vK4c5pC" },
+    { url: "https://ocersqyrztzegwzjvvoh.supabase.co", key: "sb_publishable_RsXtbJpTDEISJ-q6pKeXdg_oiYaVQa9" },
+  ];
+  function pick(t) {
+    try {
+      const iss = JSON.parse(atob(t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).iss || "";
+      return SERVERS.find((x) => iss.startsWith(x.url + "/")) || SERVERS[0];
+    } catch { return SERVERS[0]; }
+  }
   const $ = (id) => document.getElementById(id);
   const q = new URLSearchParams(location.hash.slice(1) || location.search.slice(1));
   if (location.hash || location.search) history.replaceState(null, "", location.pathname);
   const token = q.get("access_token");
+  const SV = token ? pick(token) : SERVERS[0], SB = SV.url, KEY = SV.key;
   const ICON_OK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4 10-10"/></svg>';
   const ICON_X = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
   function done(ok, title, msg) {
