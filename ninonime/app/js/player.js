@@ -171,9 +171,14 @@ export const player = (() => {
        (sakelar "Melayang di luar aplikasi"); Chrome yang mendukung memanggil handler "enterpictureinpicture"
      - Media Session: judul & sampul di notifikasi, putar/jeda, ±10 dtk, episode sebelumnya/berikutnya
        (tombol yang sama muncul di jendela PiP) */
-  const inPip = () => !!document.pictureInPictureElement;
+  // APK (Capacitor): PiP Android native lewat plugin NinoPip (apk/native/patch-android.mjs)
+  const nat = () => window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins?.NinoPip : null;
+  const natPlaying = (on) => { try { nat()?.setPlaying({ playing: !!on && prefs().autoPip }); } catch {} };
+  addEventListener("ninopip", (e) => { document.body.classList.toggle("os-pip", !!e.detail); if (!e.detail) ctl?.labels?.(); });
+  const inPip = () => !!document.pictureInPictureElement || document.body.classList.contains("os-pip");
   let pipShown = false;   // jendela PiP benar-benar tampil (ukurannya dilaporkan)
   async function togglePip() {
+    if (nat()) { try { const r = await nat().enter(); if (!r?.ok) toast("Jendela melayang tidak didukung di perangkat ini."); } catch { toast("Jendela melayang tidak didukung di perangkat ini."); } return; }
     try { if (inPip()) await document.exitPictureInPicture(); else if (vid) await vid.requestPictureInPicture(); }
     catch { toast("Jendela melayang tidak didukung di perangkat ini."); }
   }
@@ -193,7 +198,9 @@ export const player = (() => {
     setMs("enterpictureinpicture", prefs().autoPip ? () => { if (vid === v && !inPip()) v.requestPictureInPicture().catch(() => {}); } : null);
     const pos = () => { try { if (v.duration && isFinite(v.duration)) ms.setPositionState({ duration: v.duration, position: Math.min(v.currentTime, v.duration), playbackRate: v.playbackRate || 1 }); } catch {} };
     v.addEventListener("loadedmetadata", pos); v.addEventListener("seeked", pos); v.addEventListener("ratechange", pos);
-    v.addEventListener("play", () => { ms.playbackState = "playing"; pos(); }); v.addEventListener("pause", () => { ms.playbackState = "paused"; });
+    v.addEventListener("play", () => { ms.playbackState = "playing"; pos(); if (vid === v) natPlaying(true); });
+    v.addEventListener("pause", () => { ms.playbackState = "paused"; if (vid === v) natPlaying(false); });
+    v.addEventListener("ended", () => { if (vid === v) natPlaying(false); });
     // di dalam aplikasi: pemutar menandai video sedang diputar di jendela melayang sistem
     v.addEventListener("enterpictureinpicture", (e) => { root?.classList.add("pip"); const w = e.pictureInPictureWindow; pipShown = !!(w && w.width > 0); w?.addEventListener?.("resize", () => { pipShown = w.width > 0; }); });
     v.addEventListener("leavepictureinpicture", () => { root?.classList.remove("pip"); pipShown = false; });
@@ -206,7 +213,7 @@ export const player = (() => {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && inPip() && root?.classList.contains("pip") && !pipShown) document.exitPictureInPicture().catch(() => {});
   });
-  function stopMedia() { if (inPip()) document.exitPictureInPicture().catch(() => {}); root?.classList.remove("pip"); clearMs(); ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
+  function stopMedia() { natPlaying(false); if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {}); root?.classList.remove("pip"); clearMs(); ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
   const ytCmd = (func) => { try { yt?.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*"); } catch {} };
   function onYtMsg(e) {
     if (!yt || e.source !== yt.contentWindow) return;

@@ -40,7 +40,7 @@ export function mountControls(box, vid, o) {
     <button class="vc-i fs-only" data-v="eps" aria-label="Pilih episode">${icon("list", 20, 2.2)}</button>
     <button class="vc-i fs-only" data-v="set" aria-label="Pengaturan putar">${GEAR}</button>
     <button class="vc-i nofs" data-v="min" aria-label="Kecilkan ke jendela melayang">${icon("minim", 22, 2.2)}</button>
-    ${document.pictureInPictureEnabled ? `<button class="vc-i" data-v="pip" aria-label="Melayang di luar aplikasi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11.5" width="6.5" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>` : ""}
+    ${document.pictureInPictureEnabled || window.Capacitor?.isNativePlatform?.() ? `<button class="vc-i" data-v="pip" aria-label="Melayang di luar aplikasi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11.5" width="6.5" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>` : ""}
     <button class="vc-i" data-v="fs" aria-label="Layar penuh">${icon("fs", 19, 2.2)}</button>
   </div>
   <div class="vc-mid">
