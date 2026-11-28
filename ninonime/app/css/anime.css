@@ -795,3 +795,7 @@ html:has(body.ap-full) { overflow: hidden; }
 
 /* Jadwal: pembaruan penanda SEKARANG tiap menit tanpa pudar ulang */
 #jdWeek .jd-line.still .jd-it, #jdWeek .jd-line.still .jd-now { animation: none !important; }
+
+/* pratinjau geser kecilkan diatur JS (video menuju jendela melayang), bukan skala dari kiri atas */
+.ap.full .ap-vid { transform: none; }
+.ap.full .ap-sheet { transition: none; }

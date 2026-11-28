@@ -215,8 +215,9 @@ export const player = (() => {
   let morphing = null;
   function toMini() {
     const v = media(), sh = $(".ap-sheet", root);
-    const a = v.getBoundingClientRect();
-    sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
+    const a = v.getBoundingClientRect();   // posisi video saat ini (termasuk pratinjau geser)
+    const vid0 = $(".ap-vid", root); vid0.style.transform = ""; vid0.style.transformOrigin = ""; vid0.style.borderRadius = ""; vid0.style.overflow = ""; vid0.style.transition = "";
+    sh.style.backgroundColor = ""; sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
     applyMiniPos(); setState("mini");
     if (reduce()) return;
     const b = sh.getBoundingClientRect(), mw = v.getBoundingClientRect().width;
@@ -318,14 +319,32 @@ export const player = (() => {
   const applyMiniPos = () => { root.classList.toggle("mleft", miniPos.side === "left"); root.style.setProperty("--my", miniPos.y + "px"); };
   function bindDrag() {
     const sh = $(".ap-sheet", root), body = $(".ap-body", root);
-    let y0 = 0, x0 = 0, dy = 0, dx = 0, t0 = 0, on = false, axis = "";
+    let y0 = 0, x0 = 0, dy = 0, dx = 0, t0 = 0, on = false, axis = "", A = null, M = null;
     const H = () => window.innerHeight;
+    const vEl = () => $(".ap-vid", root);
+    // tujuan pratinjau: kotak video di jendela melayang (kanan/kiri bawah)
+    const miniVideoRect = () => {
+      const w = 216, h = w * 9 / 16, card = h + 52, nav = document.body.classList.contains("nav-off") ? 14 : 14 + 68 + 12;
+      const bottom = innerHeight - nav + Math.min(0, miniPos.y), top = bottom - card;
+      return { left: miniPos.side === "left" ? 12 : innerWidth - 12 - w, top, width: w, height: h };
+    };
+    // geser ke bawah: video ikut jari langsung menuju posisi jendela melayang, latar pemutar memudar
+    const preview = (p) => {
+      const R = { left: A.left + (M.left - A.left) * p, top: A.top + (M.top - A.top) * p, width: A.width + (M.width - A.width) * p };
+      const v = vEl(); v.style.transition = "none"; v.style.transformOrigin = "0 0";
+      v.style.transform = `translate(${(R.left - A.left).toFixed(1)}px, ${(R.top - A.top).toFixed(1)}px) scale(${(R.width / A.width).toFixed(4)})`;
+      v.style.borderRadius = `${(p * 14).toFixed(1)}px`; v.style.overflow = "hidden";
+      sh.style.backgroundColor = `rgba(11, 16, 24, ${(1 - p).toFixed(3)})`;
+      root.style.setProperty("--p", p.toFixed(3));
+    };
+    const clearPreview = () => { const v = vEl(); v.style.transform = ""; v.style.transformOrigin = ""; v.style.borderRadius = ""; v.style.overflow = ""; v.style.transition = ""; sh.style.backgroundColor = ""; root.style.removeProperty("--p"); };
     sh.addEventListener("touchstart", (e) => {
       if (fs || e.touches.length > 1) return;
       const inBody = body.contains(e.target);
       if (st === "full" && inBody && body.scrollTop > 0) return;
       if (e.target.closest("iframe, video, .vc-seek, .vc-b, .vc-i, .vc-sp, .vc-pn, .vc-skip, .vc-next, .ap-set, .ap-chips, .ap-eps")) return;
       y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = dx = 0; t0 = Date.now(); on = true; axis = "";
+      if (st === "full") { clearPreview(); A = vEl().getBoundingClientRect(); M = miniVideoRect(); }
     }, { passive: true });
     sh.addEventListener("touchmove", (e) => {
       if (!on) return;
@@ -334,9 +353,7 @@ export const player = (() => {
       if (st === "full") {
         if (axis !== "y" || dy < 0) { if (dy < 0) on = false; return; }
         if (e.cancelable) e.preventDefault();
-        const p = Math.min(1, dy / (H() * 0.55));
-        sh.style.transition = "none"; sh.style.transform = `translateY(${dy}px)`;
-        root.style.setProperty("--p", p.toFixed(3));
+        preview(Math.min(1, dy / (H() * 0.6)));
       } else if (st === "mini") {
         if (e.cancelable) e.preventDefault();
         sh.style.transition = "none"; sh.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -348,7 +365,11 @@ export const player = (() => {
       sh.style.transition = "";
       if (st === "full") {
         if (axis === "y" && (dy > 110 || (vel > 0.6 && dy > 30))) minimize();
-        else { sh.animate([{ transform: sh.style.transform }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" }); sh.style.transform = ""; root.style.removeProperty("--p"); }
+        else if (axis === "y" && A) {   // batal: video kembali ke atas
+          const v = vEl(), from = v.style.transform, bg = sh.style.backgroundColor; clearPreview();
+          v.animate([{ transform: from, transformOrigin: "0 0" }, { transform: "none", transformOrigin: "0 0" }], { duration: 240, easing: "cubic-bezier(.2,.8,.2,1)" });
+          sh.animate([{ backgroundColor: bg }, { backgroundColor: "rgb(11, 16, 24)" }], { duration: 240 });
+        }
       } else if (st === "mini") {
         if (!axis) return;   // hanya ketukan → onClick membuka penuh
         dragged = Date.now();   // klik sesudah menyeret tidak membuka pemutar
