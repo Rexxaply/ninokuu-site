@@ -3,6 +3,7 @@
 //   shell.js (bersama) · gate.js (gerbang keypass) · auth.js (masuk/daftar/lupa) · akun.js (halaman Akun)
 //   navbar.js (bar bawah) · keyboard.js (keyboard layar) · anime.js (beranda, jadwal, cari, detail, pemutar, admin)
 import { initKeyboard } from "./keyboard.js";
+import { initUpdate } from "./update.js";
 import * as api from "./api.js";
 import * as AN from "./anime.js";
 import { icon, $$, closeAsk } from "./ui.js";
@@ -112,6 +113,7 @@ window.addEventListener("hashchange", render);
 
 /* ---------- menyalakan ---------- */
 initKeyboard();   // keyboard layar (logika sama dengan Ninokuu)
+initUpdate();     // APK: peringatan versi baru (seperti Ninokuu)
 
 // tombol kembali browser/HP saat pemutar penuh → kecilkan pemutar dulu
 addEventListener("keydown", (e) => { if (e.key === "Escape" && (AN.closeKeypass() || AN.player.onBack())) e.preventDefault(); });

@@ -3,6 +3,7 @@
 import * as api from "./api.js";
 import * as AN from "./anime.js";
 import { esc, icon, $, toast, ask } from "./ui.js";
+import { checkUpdate } from "./update.js";
 import { VERSION, view, go, setActs, group, mrow } from "./shell.js";
 import { authPage } from "./auth.js";
 import * as L from "./level.js";
@@ -29,7 +30,7 @@ ${group("Akun", mrow("user", "Akun", "Username · email · password", "akun"))}
 <div id="kpSec">${AN.keypassSection()}</div>
 <div id="devRow">${admin ? devGroup() : ""}</div>
 ${group("Tontonanmu", mrow("star", "Level &amp; Rank", `<span id="lvSub">${esc(lv.rank)} · Lv ${lv.lv} · dari akun Ninokuu</span>`, "level") + mrow("clock", "Riwayat tonton", `${api.lsGet("animeHist", []).length} judul`, "hist"))}
-${isApp() ? "" : group("Aplikasi Android", mrow("down", "Pasang aplikasi Android (APK)", "Halaman unduh di ninokuu.site", "getapk"))}
+${isApp() ? group("Aplikasi", mrow("down", "Periksa pembaruan", "Versi terpasang " + esc(VERSION), "checkupd")) : group("Aplikasi Android", mrow("down", "Pasang aplikasi Android (APK)", "Halaman unduh di ninokuu.site", "getapk"))}
 ${group("Data &amp; penyimpanan", mrow("cloud", "Backup data offline", "Simpan favorit &amp; riwayat tonton ke file", "backup") + mrow("restore", "Pulihkan data", "Dari file backup", "restore") + mrow("trash", "Bersihkan cache", `<span id="cacheSub">Menghitung…</span>`, "cache"))}
 ${group("Dukungan", mrow("info", "Tentang aplikasi", "Versi " + esc(VERSION), "about") + mrow("shield", "Kebijakan privasi", "", "privacy") + mrow("doc", "Ketentuan pengguna", "", "terms"))}
 ${group("Sesi", mrow("out", "Keluar", "", "logout", true))}
@@ -52,6 +53,7 @@ ${group("Sesi", mrow("out", "Keluar", "", "logout", true))}
     level: () => go("#/p/level"), akun: () => go("#/p/akun"), hist: () => { api.lsSet("favTab", "hist"); go("#/favorit"); },
     dev: () => go("#/admin"),
     getapk: () => window.open(SITE, "_blank", "noopener"),
+    checkupd: () => checkUpdate(true),
     backup: () => go("#/p/backup"), restore: () => go("#/p/restore"),
     cache: async () => {
       try { for (const k of Object.keys(localStorage)) if (k.startsWith("ninonime:jk:")) localStorage.removeItem(k); } catch {}
