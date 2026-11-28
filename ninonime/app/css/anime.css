@@ -792,3 +792,6 @@ html:has(body.ap-full) { overflow: hidden; }
 #jdWeek .jd-line::before { transform: none !important; transition: none !important; animation: none !important; }
 #jdWeek .jd-nl, #jdWeek .jd-tag { animation: none !important; }
 @keyframes jdFade { from { opacity: .35; } }
+
+/* Jadwal: pembaruan penanda SEKARANG tiap menit tanpa pudar ulang */
+#jdWeek .jd-line.still .jd-it, #jdWeek .jd-line.still .jd-now { animation: none !important; }

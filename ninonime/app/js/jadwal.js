@@ -35,7 +35,7 @@ export async function vJadwal(view, x) {
   fitSticky();
 
   // ---- isi satu hari ----
-  const draw = (d) => {
+  const draw = (d, still = false) => {
     const sec = secs[d], list = lists[d]; if (!sec || !list) return;
     const now = wibNow(), isToday = d === now.day, past = d < now.day;
     $(".jd-n", sec).textContent = `${list.length} anime`;
@@ -50,7 +50,7 @@ export async function vJadwal(view, x) {
     }
     if (isToday && !nowPut && list.length) html += nowRow();
     const line = $(".jd-line", sec);
-    line.outerHTML = list.length ? `<div class="jd-line">${html}</div>` : `<div class="jd-line jd-empty"><span class="mu sm">Tidak ada anime yang tayang hari ini.</span></div>`;
+    line.outerHTML = list.length ? `<div class="jd-line${still ? " on still" : ""}">${html}</div>` : `<div class="jd-line jd-empty"><span class="mu sm">Tidak ada anime yang tayang hari ini.</span></div>`;
     requestAnimationFrame(() => $(".jd-line", sec)?.classList.add("on"));
   };
   const fail = (d, e) => { const line = $(".jd-line", secs[d]); if (line) line.outerHTML = `<div class="jd-line">${errHtml(e)}</div>`; };
@@ -98,7 +98,7 @@ export async function vJadwal(view, x) {
   const te = (e) => { const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) { const n = Math.min(6, Math.max(0, active + (dx < 0 ? 1 : -1))); if (n !== active) goDay(n); } };
   wk.addEventListener("touchstart", ts, { passive: true }); wk.addEventListener("touchend", te, { passive: true });
   // penanda SEKARANG & hitung mundur diperbarui tiap menit (hanya hari ini, tanpa menggulir)
-  const tick = setInterval(() => { if (document.visibilityState === "visible" && shown() && lists[wn.day]) { const y = scrollY; draw(wn.day); scrollTo(0, y); } }, 60e3);
+  const tick = setInterval(() => { if (document.visibilityState === "visible" && shown() && lists[wn.day]) { const y = scrollY; draw(wn.day, true); scrollTo(0, y); } }, 60e3);
   addEventListener("resize", fitSticky, { passive: true });
   x.setCleanup(() => { clearInterval(tick); removeEventListener("scroll", onScroll); removeEventListener("resize", fitSticky); cancelAnimationFrame(raf); clearTimeout(lock); });
   x.setActs({ day: (el) => goDay(+el.dataset.v), today: () => goNow(), retry: () => vJadwal(view, x) });
