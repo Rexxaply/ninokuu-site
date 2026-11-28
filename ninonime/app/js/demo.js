@@ -34,6 +34,7 @@ const delay = (v) => new Promise((r) => setTimeout(() => r(v), 250));   // sedik
 
 export const DEMO_API = {
   now: (p = 1, t = "") => delay(page(DEMO_ANIME.filter((a) => a.airing).filter(byType(t)), p)),
+  hot: () => delay([...DEMO_ANIME].filter((a) => a.airing).sort((a, b) => b.members - a.members).slice(0, 10)),
   top: () => delay([...DEMO_ANIME].filter((a) => a.airing).sort((a, b) => b.score - a.score).slice(0, 10)),
   search: (q, p = 1, t = "") => { const w = String(q || "").toLowerCase(); return delay(page(DEMO_ANIME.filter((a) => a.title.toLowerCase().includes(w)).filter(byType(t)), p)); },
   detail: (id) => delay(DEMO_ANIME.find((a) => a.id === Number(id)) || DEMO_ANIME[0]),

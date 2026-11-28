@@ -91,6 +91,10 @@ async function render() {
   if (depth === 0) dropKept();   // pindah tab lain: halaman yang disimpan tidak dipakai lagi
   view.innerHTML = "";
   curPage = ++pageSeq;
+  // info anime selalu dibuka dari paling atas: posisinya tidak diingat (dulu membuka anime yang sama lagi
+  // langsung di daftar episode, poster di luar layar → sampul terbang ke tempat kosong)
+  const fresh = route.name === "anime";
+  if (fresh) { scrollMem.delete(key); window.scrollTo(0, 0); }
   const job = !OPEN.has(route.name) && !AN.hasAccess() ? (gate(), null) : VIEWS[route.name](...route.params);
   void view.offsetWidth; view.classList.add("in", fwd ? "in-f" : "in-b");
   await job;

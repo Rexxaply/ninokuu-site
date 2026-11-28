@@ -107,20 +107,14 @@ export const player = (() => {
   /* ----- buka / kecilkan / tutup (animasi FLIP: video berpindah halus antara penuh ↔ melayang) ----- */
   const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
   /* penuh → melayang: seluruh kotak pemutar menyusut dari posisi video ke kotak melayang (bukan hanya videonya,
-     yang dulu terpotong oleh kotak mini → kotak tampak kosong sesaat). Isi di bawah video memudar dari salinannya. */
+     yang dulu terpotong oleh kotak mini → kotak tampak kosong sesaat). Halaman di bawahnya langsung terlihat. */
   let morphing = null;
   function toMini() {
-    const v = media(), sh = $(".ap-sheet", root), body = $(".ap-body", root);
-    const a = v.getBoundingClientRect(), s0 = sh.getBoundingClientRect(), bd = body.getBoundingClientRect();
-    // tirai: salinan isi pemutar (latar + info) di tempatnya semula, lalu memudar → halaman di bawah muncul perlahan
-    const veil = document.createElement("div"); veil.className = "ap-veil";
-    veil.style.cssText = `left:${s0.left}px;top:${s0.top}px;width:${s0.width}px;height:${s0.height}px`;
-    const copy = body.cloneNode(true); copy.className = "ap-copy";   // bukan .ap-body: itu disembunyikan saat melayang
-    copy.style.cssText = `position:absolute;left:${bd.left - s0.left}px;top:${bd.top - s0.top}px;width:${bd.width}px;height:${bd.height}px;opacity:${getComputedStyle(body).opacity}`;
-    veil.append(copy); document.body.append(veil); copy.scrollTop = body.scrollTop;
+    const v = media(), sh = $(".ap-sheet", root);
+    const a = v.getBoundingClientRect();
     sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
     setState("mini");
-    if (reduce()) { veil.remove(); return; }
+    if (reduce()) return;
     const b = sh.getBoundingClientRect(), mw = v.getBoundingClientRect().width;
     morphing?.cancel?.();
     root.classList.add("morph");
@@ -131,11 +125,9 @@ export const player = (() => {
       { duration: dur, easing: ease });
     v.animate([{ width: a.width + "px" }, { width: mw + "px" }], { duration: dur, easing: ease });
     $$(".ap-mt, .ap-mb, .ap-bar", root).forEach((el) => el.animate([{ opacity: 0, transform: "translateX(-8px)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: dur * 0.55, easing: "ease-out", fill: "backwards" }));
-    veil.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: "ease-out", fill: "forwards" });
-    copy.animate([{ transform: "none" }, { transform: "translateY(36px)" }], { duration: 300, easing: "ease-in" });
     morphing = k;
-    const done = () => { if (morphing === k) { morphing = null; root.classList.remove("morph"); } veil.remove(); };
-    k.onfinish = done; k.oncancel = done; setTimeout(() => veil.remove(), dur + 200);
+    const done = () => { if (morphing === k) { morphing = null; root.classList.remove("morph"); } };
+    k.onfinish = done; k.oncancel = done;
   }
   function flip(to) {
     if (to === "mini") return toMini();

@@ -55,6 +55,8 @@ const SFW = "sfw=true";
 export const A = {
   now: async (page = 1, type = "") => { const r = await jget(`/seasons/now?${SFW}&limit=24&page=${page}${type ? "&filter=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
   top: async () => uniq(((await jget(`/top/anime?filter=airing&${SFW}&limit=10`, 180)).data || []).map(mapA)),
+  // 10 Hot Anime: anime musim ini yang paling banyak ditonton (jumlah anggota MyAnimeList)
+  hot: async () => [...(await A.now(1)).items].sort((a, b) => (b.members || 0) - (a.members || 0)).slice(0, 10),
   search: async (q, page = 1, type = "") => { const r = await jget(`/anime?q=${encodeURIComponent(q)}&${SFW}&limit=24&page=${page}&order_by=members&sort=desc${type ? "&type=" + type : ""}`, 60); return { items: uniq((r.data || []).map(mapA)), next: !!r.pagination?.has_next_page }; },
   detail: async (id) => mapA((await jget(`/anime/${id}/full`, 360)).data || {}),
   // gambar per episode (kalau ada di MyAnimeList): { nomor: url }

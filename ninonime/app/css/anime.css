@@ -237,8 +237,6 @@ body.short.nav-off .ap.mini .ap-sheet { bottom: calc(8px + env(safe-area-inset-b
 .ap.mini .ap-bar i { display: block; width: 0; height: 100%; background: var(--red); }
 /* animasi penuh → melayang: kotak berpindah lewat left/top/width/height, jadi inset & margin bawaan dilepas sementara */
 .ap.morph .ap-sheet { inset: auto; right: auto; bottom: auto; margin: 0; max-width: none; z-index: 41; }
-.ap-veil { position: fixed; z-index: 38; background: var(--bg); overflow: hidden; pointer-events: none; padding-top: var(--sat); }
-.ap-veil .ap-copy { overflow: hidden; padding: 0 18px; }
 body.ap-mini .pad-nav { height: calc(110px + 82px + env(safe-area-inset-bottom)); }
 body.ap-full { overflow: hidden; }
 /* layar penuh (miring) */
@@ -292,7 +290,7 @@ body[data-mode="anime"] #nav a { font-size: 10.5px; }
 @media (prefers-reduced-motion: reduce) { .tc-it { transition: none; } .tc-crown { animation: none; } }
 
 /* ---------- Favorit anime ---------- */
-.fv-chips { padding-top: 4px; gap: 12px; }
+.fv-chips { margin-top: 10px; padding-top: 4px; gap: 12px; }
 .fv-chips button { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px 0 16px; min-height: 36px; }
 .fv-chips button b { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: grid; place-items: center; font-size: 11px; background: rgba(255, 255, 255, .1); }
 /* pil putih yang bergeser (.chips.has-th) dari app.css dipakai juga di sini */
@@ -482,3 +480,25 @@ body.short.ap-mini .jd-today { bottom: calc(8px + 52px + 8px + 70px + 12px + env
 /* animasi masuk (kartu muncul satu per satu, dsb.) dianggap sudah selesai: tidak diputar ulang.
    Jeda negatif → animasi sekali jalan langsung di posisi akhir; animasi berulang (titik SEKARANG, putaran muat) tetap jalan. */
 #view.restored *, #view.restored *::before, #view.restored *::after { animation-delay: -60s !important; }
+
+/* ===== Terakhir Ditonton (Beranda) ===== */
+.more-pill { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 12px 0 15px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .14);
+  font-size: 13px; font-weight: 700; color: var(--soft); }
+.more-pill:active { scale: .96; }
+.lw-row { gap: 12px; }
+.lw { flex: none; width: 150px; display: flex; flex-direction: column; animation: anIn .45s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(var(--i, 0) * 40ms); }
+.lw-th { position: relative; display: block; height: 86px; border-radius: 12px 12px 0 0; overflow: hidden; background: var(--s1); }
+.lw-th .cover.lw-cv { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
+.lw-th .cover.lw-cv img { object-position: center 28%; }
+.lw-shade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(5, 8, 14, .78)); pointer-events: none; }
+.lw-ep { position: absolute; left: 9px; bottom: 7px; font-size: 13px; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+.lw-bar { display: block; height: 3px; background: rgba(255, 255, 255, .14); border-radius: 0 0 2px 2px; overflow: hidden; }
+.lw-bar i { display: block; height: 100%; background: var(--red); }
+.lw-t { margin-top: 7px; font-size: 13px; color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lw:active .lw-th { transform: scale(.97); }
+
+/* ===== Favorit · Semua: bagian ONGOING / TAMAT ===== */
+.fv-sec + .fv-sec { margin-top: 26px; }
+.fv-sh { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; font-size: 16px; font-weight: 800; letter-spacing: .14em; }
+.fv-sh::before { content: ""; width: 4px; height: 20px; border-radius: 2px; background: var(--red); }
+.fv-sh i { font-style: normal; font-size: 11.5px; font-weight: 700; letter-spacing: 0; color: var(--mu); padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, .07); }

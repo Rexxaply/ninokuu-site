@@ -52,6 +52,9 @@ function pick(title, list, cur) {
 }
 export async function vFav(view, x) {
   const want = api.lsGet("favTab"); if (want) { fv.tab = want; fv.q = ""; api.lsSet("favTab", null); }
+  // dari "Lihat Lainnya" di Beranda: #/favorit?tab=hist → langsung tab Riwayat (alamat dibersihkan)
+  const qTab = (location.hash.match(/[?&]tab=(lib|hist)\b/) || [])[1];
+  if (qTab) { fv.tab = qTab; fv.q = ""; history.replaceState(null, "", location.pathname + location.search + "#/favorit"); }
   const grid = () => api.lsGet("favView", "grid") === "grid";
   const sortKey = () => (SORTS.some(([k]) => k === api.lsGet("favSort")) ? api.lsGet("favSort") : "added");
   const draw = () => {
@@ -71,6 +74,11 @@ export async function vFav(view, x) {
       <span class="fa-meta"><b class="fa-rd">Episode ${esc(h.ep ?? "?")}</b>${h.dur ? `<span class="fa-sep">·</span>${fmtT(h.t)} / ${fmtT(h.dur)}` : ""}</span>
       <span class="fa-meta">${esc(ago(h.at))}</span>${p ? `<span class="fa-bar"><i style="width:${p}%"></i></span>` : ""}</span>
       <span class="hl-go">${icon("play", 12, 2.6)}Lanjut</span></a>`; };
+    const body = (l, k = 0) => grid() ? `<div class="an-grid mt8">${l.map((f, i) => card(f, i + k)).join("")}</div>` : `<div class="mn-rows">${l.map((f, i) => row(f, i + k)).join("")}</div>`;
+    // tab Semua: bagian ONGOING dan TAMAT terpisah (bagian kosong tidak ditampilkan)
+    const groups = (l) => { const a = l.filter((f) => !isDone(f)), b = l.filter(isDone);
+      return [["ONGOING", a, 0], ["TAMAT", b, a.length]].filter(([, xs]) => xs.length)
+        .map(([t, xs, k]) => `<section class="fv-sec"><h2 class="fv-sh"><span>${t}</span><i>${xs.length}</i></h2>${body(xs, k)}</section>`).join(""); };
     const empty = (ic, t, s, btn) => `<div class="empty"><span class="empty-ic">${icon(ic, 24)}</span><b>${t}</b><span>${s}</span>${btn ? `<a class="btn ghost" href="#/cari">${btn}</a>` : ""}</div>`;
     view.innerHTML = `<div class="page-h"><h1>Favorit</h1></div>
 <div class="px"><div class="seg" role="tablist">${tabs.map(([k, n]) => `<button role="tab" aria-selected="${fv.tab === k}" data-act="tab" data-v="${k}">${n}</button>`).join("")}</div>
@@ -83,7 +91,8 @@ ${fv.tab === "lib" ? `<div class="chips fv-chips" role="group">${[["all", "Semua
   ? (hl.length ? `<div class="fa-rows">${hl.map(hrow).join("")}</div>` : hs.length ? empty("search", "Tidak ditemukan", "Coba kata lain.") : empty("clock", "Riwayat masih kosong", "Anime yang kamu tonton muncul di sini.", "Cari anime"))
   : !all.length ? empty("heart", "Koleksi masih kosong", "Tekan Simpan di halaman info anime untuk menyimpannya di sini.", "Cari anime")
   : !lib.length ? empty("search", "Tidak ditemukan", q ? "Coba kata lain." : "Belum ada anime di kelompok ini.")
-  : grid() ? `<div class="an-grid mt8">${lib.map(card).join("")}</div>` : `<div class="mn-rows">${lib.map(row).join("")}</div>`}</div>
+  : fv.filter === "all" && !q ? groups(lib)
+  : body(lib)}</div>
 <div class="pad-nav"></div>`;
     const fq = $("#fq");
     let t = 0; fq.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { fv.q = fq.value; const pos = fq.selectionStart; draw(); const n = $("#fq"); n.focus(); n.setSelectionRange(pos, pos); }, 250); });

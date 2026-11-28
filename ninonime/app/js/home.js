@@ -105,13 +105,15 @@ function carousel(root, list, extraCleanup) {
 }
 
 // --- Beranda anime ---
-// kartu "Lanjut nonton" (digambar ulang saat kembali ke Beranda: riwayat bisa berubah karena menonton)
-const resumeHtml = () => { const last = hist()[0]; return last ? `<section class="sec s16"><h2 class="cap">Lanjut nonton</h2>
-  <a class="resume an-res" href="${aHref(last.id)}" data-act="resume">${acv(last.cover, last.title, "rs")}
-    <span class="rc-mid g6"><span class="meta"><span class="tag-s">Episode ${esc(last.ep)}</span></span><span class="rs-t">${esc(last.title)}</span>
-      <span class="mu sm">${last.dur ? `${hhmm(Math.floor(last.t / 60))} dari ${hhmm(Math.floor(last.dur / 60))}` : "Ketuk untuk lanjut"}</span>
-      <span class="prog"><span style="width:${last.dur ? Math.max(4, Math.round((last.t / last.dur) * 100)) : 6}%"></span></span></span>
-    <span class="play">${icon("play", 19, 2)}</span></a></section>` : ""; };
+// "Terakhir Ditonton": baris geser (gambar lebar, label episode, garis progres, judul) + "Lihat Lainnya" → Riwayat.
+// Digambar ulang saat kembali ke Beranda (riwayat bisa berubah karena menonton).
+const resumeHtml = () => {
+  const list = hist().slice(0, 12); if (!list.length) return "";
+  return `<section class="sec s16 nox"><div class="sec-h px"><h2>Terakhir Ditonton</h2><a class="more-pill" href="#/favorit?tab=hist">Lihat Lainnya${icon("chev", 15, 2.4)}</a></div>
+  <div class="hs lw-row">${list.map((h, i) => { const p = h.dur ? Math.max(3, Math.min(100, Math.round((h.t / h.dur) * 100))) : 0;
+    return `<a class="lw" href="${aHref(h.id)}" style="--i:${i}"><span class="lw-th">${acv(h.cover, h.title, "lw-cv")}<span class="lw-shade"></span><b class="lw-ep">Eps ${esc(h.ep ?? "?")}</b></span>
+      <span class="lw-bar"><i style="width:${p}%"></i></span><span class="lw-t">${esc(h.title)}</span></a>`; }).join("")}</div></section>`;
+};
 
 export async function vHome(view, x) {
   const wn = wibNow();
@@ -121,7 +123,7 @@ export async function vHome(view, x) {
 <section class="hello"><h1>Mau nonton apa <span class="gold">hari ini</span>?</h1><span class="mu sm">${DAYS[wn.day]}, ${wn.date.getUTCDate()} ${MONTHS[wn.date.getUTCMonth()]} · jam tayang dalam WIB</span></section>
 <div id="resumeBox">${resumeHtml()}</div>
 <section class="sec s24 nox"><div class="sec-h px"><h2>Tayang hari ini</h2><a class="link-red" href="#/jadwal">Lihat jadwal</a></div><div class="hs an-today" id="today">${`<span class="an-tm"><span class="sk an-tm-sk"></span></span>`.repeat(4)}</div></section>
-<section class="sec s26 nox"><div class="sec-h px"><h2>Top 10 sedang tayang</h2><span class="mu sm" id="tcN"></span></div><div class="cf" id="atop"><div class="cf-sk sk"></div><div class="cf-sk sk"></div><div class="cf-sk sk"></div></div></section>
+<section class="sec s26 nox"><div class="sec-h px"><h2>10 Hot Anime</h2><span class="mu sm" id="tcN"></span></div><div class="cf" id="atop"><div class="cf-sk sk"></div><div class="cf-sk sk"></div><div class="cf-sk sk"></div></div></section>
 <section class="sec s26"><div class="sec-h"><h2>Musim ini</h2><span class="mu sm" id="seasonN"></span></div><div id="season">${skCards(6)}</div>
   <button class="more-auto" id="aMore" hidden><span class="spin-s" aria-hidden="true"></span>Memuat lainnya…</button></section>
 <div class="pad-nav"></div>`;
@@ -153,7 +155,7 @@ export async function vHome(view, x) {
   };
   const loadTop = async () => {
     try {
-      const list = (await A.top()).slice(0, 10), el = $("#atop"); if (!el || !list.length) return;
+      const list = (await A.hot()).slice(0, 10), el = $("#atop"); if (!el || !list.length) return;
       x.setCleanup(carousel(el, list, () => io.disconnect()));
     } catch (e) { const el = $("#atop"); if (el) el.innerHTML = `<span class="mu sm px">${esc(e.message)}</span>`; }
   };
