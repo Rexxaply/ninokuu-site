@@ -763,3 +763,32 @@ body.short.nav-off .ap.mini .ap-sheet { bottom: calc(10px + env(safe-area-inset-
 .ap-grip { display: none; }
 .ap.mini .ap-grip { display: grid; grid-template-columns: repeat(2, 4px); gap: 3px; position: absolute; right: 12px; bottom: 16px; pointer-events: none; }
 .ap-grip i { width: 4px; height: 4px; border-radius: 50%; background: rgba(255, 255, 255, .35); }
+
+/* ===== perbaikan v2.1 ===== */
+/* geser pemutar ke bawah: gestur dipegang aplikasi, bukan dijadikan gulir halaman oleh Chrome
+   (dulu halaman di belakang ikut tergulir & video "macet" di tengah sebelum melompat ke jendela melayang) */
+.ap.full .ap-sheet { touch-action: none; overscroll-behavior: none; }
+.ap.full .ap-body { touch-action: pan-y; }
+html:has(body.ap-full) { overflow: hidden; }
+/* baris atas pemutar: biasa → hanya kecilkan & layar penuh di kanan; layar penuh → judul, resolusi, episode, pengaturan */
+.vc-top { justify-content: flex-end; }
+.ap:not(.fs) .vc .fs-only { display: none; }
+.ap.fs .vc .nofs { display: none; }
+.ap.fs .vc-top { padding: 14px 16px 0; gap: 8px; } .ap.fs .vc-bot { padding: 0 16px 12px; }
+/* sakelar (menu Pengaturan & panel layar penuh) */
+.sw-list { display: flex; flex-direction: column; }
+.sw-row { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 8px 4px; text-align: left; color: inherit; }
+.sw-row + .sw-row::before { content: ""; position: absolute; left: 4px; right: 4px; top: 0; height: 1px; background: rgba(255, 255, 255, .08); }
+.sw-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; } .sw-l b { font-size: 14px; } .sw-l span { font-size: 11.5px; color: var(--mu); }
+.sw-tg { flex: none; position: relative; width: 46px; height: 28px; border-radius: 14px; background: rgba(255, 255, 255, .18); transition: background .25s; }
+.sw-tg::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .3); transition: transform .28s cubic-bezier(.3, .7, .2, 1.3); }
+.sw-row[aria-checked="true"] .sw-tg { background: var(--red); } .sw-row[aria-checked="true"] .sw-tg::after { transform: translateX(18px); }
+.pop.menu { padding: 12px 14px; } .pop.menu .pop-h { padding-bottom: 4px; }
+.pop-note { margin: 6px 4px 0; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .08); font-size: 11px; color: var(--mu); line-height: 1.5; }
+.pc svg { flex: none; }
+.vc-pc.set { max-width: 420px; } .vc-pc.set .vc-ph svg { flex: none; }
+/* Jadwal: isi menggantikan kerangka tanpa kedip (pudar singkat, tanpa animasi masuk berurutan) */
+#jdWeek .jd-it, #jdWeek .jd-now { animation: jdFade .22s ease-out both !important; animation-delay: 0s !important; }
+#jdWeek .jd-line::before { transform: none !important; transition: none !important; animation: none !important; }
+#jdWeek .jd-nl, #jdWeek .jd-tag { animation: none !important; }
+@keyframes jdFade { from { opacity: .35; } }

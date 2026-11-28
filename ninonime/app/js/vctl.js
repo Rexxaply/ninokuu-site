@@ -23,6 +23,11 @@ const jump = (dir, n = 26) => `<svg width="${n}" height="${n}" viewBox="0 0 24 2
   <text x="12" y="15.6" text-anchor="middle" font-size="8.6" font-weight="800" fill="currentColor" stroke="none" font-family="system-ui,sans-serif">5</text></svg>`;
 const skipI = (dir) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" ${dir < 0 ? 'style="transform:scaleX(-1)"' : ""}><path d="M6 5.5v13l9.5-6.5z"/><rect x="16.5" y="5.5" width="2.4" height="13" rx="1"/></svg>`;
 
+export const GEAR = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
+// pilihan putar otomatis (dipakai menu Pengaturan di bawah video dan panel di layar penuh)
+export const AUTO_OPTS = [["autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai"], ["autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai"]];
+export const swRow = (k, t, sub, on) => `<button class="sw-row" data-sw="${k}" role="switch" aria-checked="${on}"><span class="sw-l"><b>${t}</b><span>${sub}</span></span><i class="sw-tg" aria-hidden="true"></i></button>`;
+
 export function mountControls(box, vid, o) {
   // o: { intro, endingFromEnd, title(), hasPrev(), hasNext(), onPrev(), onNext(), onMin(), onFs(),
   //      res() → { cur, items:[{ v, label, tag }] }, onRes(v), eps() → { cur, n }, onEp(n), onError() }
@@ -30,10 +35,11 @@ export function mountControls(box, vid, o) {
   el.innerHTML = `<div class="vc-tap" aria-hidden="true"></div>
   <span class="vc-rip l" aria-hidden="true">${jump(-1, 34)}<b>−5 detik</b></span><span class="vc-rip r" aria-hidden="true">${jump(1, 34)}<b>+5 detik</b></span>
   <div class="vc-top">
-    <button class="vc-i" data-v="min" aria-label="Kecilkan">${icon("minim", 22, 2.2)}</button>
-    <span class="vc-ttl">${icon("play", 13, 2.4)}<b></b></span>
-    <button class="vc-i vc-hd" data-v="res" aria-label="Pilih resolusi"><i>HD</i></button>
-    <button class="vc-i" data-v="eps" aria-label="Pilih episode">${icon("list", 20, 2.2)}</button>
+    <span class="vc-ttl fs-only">${icon("play", 13, 2.4)}<b></b></span>
+    <button class="vc-i vc-hd fs-only" data-v="res" aria-label="Pilih resolusi"><i>HD</i></button>
+    <button class="vc-i fs-only" data-v="eps" aria-label="Pilih episode">${icon("list", 20, 2.2)}</button>
+    <button class="vc-i fs-only" data-v="set" aria-label="Pengaturan putar">${GEAR}</button>
+    <button class="vc-i nofs" data-v="min" aria-label="Kecilkan ke jendela melayang"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11.5" width="6.5" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>
     <button class="vc-i" data-v="fs" aria-label="Layar penuh">${icon("fs", 19, 2.2)}</button>
   </div>
   <div class="vc-mid">
@@ -93,6 +99,13 @@ export function mountControls(box, vid, o) {
     pn.querySelector(".vc-po.on")?.scrollIntoView({ block: "nearest", inline: "center" });
   };
 
+  const openSet = () => {
+    const p = prefs();
+    pn.innerHTML = `<div class="vc-pc set"><div class="vc-ph">${GEAR}<b>Pengaturan putar</b><button class="vc-px" data-v="pnx" aria-label="Tutup">${icon("x", 18, 2.4)}</button></div>
+      <div class="sw-list">${AUTO_OPTS.map(([k, t, sub]) => swRow(k, t, sub, !!p[k])).join("")}</div></div>`;
+    pn.hidden = false; el.classList.add("on", "pn-on"); clearTimeout(hideT);
+  };
+  pn.addEventListener("click", (e) => { const b = e.target.closest("[data-sw]"); if (!b) return; e.stopPropagation(); const on = b.getAttribute("aria-checked") !== "true"; setPref(b.dataset.sw, on); b.setAttribute("aria-checked", String(on)); o.onPrefs?.(); });
   // hitung mundur ke episode berikutnya
   const stopCd = () => { clearInterval(cd); cd = 0; nextBox.hidden = true; };
   const startCd = () => {
@@ -150,6 +163,7 @@ export function mountControls(box, vid, o) {
     else if (v === "res") { const r = o.res(); openPn("Pilih Resolusi", `<i class="vc-hdi">HD</i>`, r.items.map((x) => ({ v: x.v, label: x.label, sub: x.tag })), r.cur, (k) => o.onRes(k)); return; }
     else if (v === "speed") { openPn("Kecepatan", icon("clock", 16, 2.2), SPEEDS.map((x) => ({ v: x, label: x === 1 ? "Normal" : speedName(x) })), prefs().speed, (k) => { setPref("speed", Number(k)); vid.playbackRate = Number(k); labels(); o.onSpeed?.(); }); return; }
     else if (v === "eps") { const ep = o.eps(); openPn("Pilih Episode", icon("list", 16, 2.2), Array.from({ length: ep.n }, (_, i) => ({ v: i + 1, label: String(i + 1) })), ep.cur, (k) => o.onEp(Number(k)), "grid"); return; }
+    else if (v === "set") { openSet(); return; }
     else if (v === "pnx") { closePn(); return; }
     else if (v === "pick") { pn._pick?.(b.dataset.k); return; }
     show();

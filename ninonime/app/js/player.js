@@ -1,7 +1,7 @@
 // NinoNime · modul anime/player (dipecah dari anime.js)
 import { esc, icon, $, $$, toast } from "./ui.js";
 import { episodeSource } from "./sources.js";
-import { mountControls, prefs, setPref } from "./vctl.js";
+import { AUTO_OPTS, GEAR, mountControls, prefs, setPref, swRow } from "./vctl.js";
 import * as api from "./api.js";
 import { aHref, acv, hist, saveHist } from "./lib.js";
 
@@ -108,18 +108,31 @@ export const player = (() => {
   const epTotal = () => Math.max(cur?.eps || 0, list.length, ep);
   // chip [720p | Ganti] dan [S1 | Ganti Server] + kartu sakelar putar otomatis
   function drawSettings() {
-    const box = root && $(".ap-set", root), chips = root && $(".ap-chips", root);
+    const chips = root && $(".ap-chips", root);
     const has = !!(vid && src0 && opts[srvI]);
     if (chips) { chips.classList.toggle("nosrc", !has); if (has) { $('[data-lbl="res"]', chips).textContent = opts[srvI].q || "Auto"; $('[data-lbl="srv"]', chips).textContent = "S" + (servers().indexOf(opts[srvI].s) + 1); } }
     ctl?.labels();
-    if (!box) return;
-    if (!has) { box.innerHTML = ""; return; }
-    const p = prefs();
-    const sw = (k, t, sub) => `<label class="ps-row ps-sw"><span class="ps-l"><b>${t}</b><span>${sub}</span></span><input type="checkbox" role="switch" data-ps="${k}" ${p[k] ? "checked" : ""}><i class="ps-tg" aria-hidden="true"></i></label>`;
-    box.innerHTML = `<div class="ps">
-      ${sw("autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai")}
-      ${sw("autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai")}
-      ${src0.demo ? `<p class="ps-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0). Di demo, semua resolusi satu server memutar file yang sama.</p>` : ""}</div>`;
+  }
+  // menu Pengaturan (sakelar putar otomatis) di dekat chip; tetap terbuka saat sakelar diketuk
+  function setMenu(anchor) {
+    popClose?.();
+    const p = prefs(), host = document.createElement("div"); host.className = "pop-host";
+    host.innerHTML = `<div class="pop menu" role="dialog" aria-label="Pengaturan putar"><div class="pop-h"><b>Pengaturan putar</b><button class="pop-x" data-pp="x" aria-label="Tutup">${icon("x", 18, 2.4)}</button></div>
+      <div class="sw-list">${AUTO_OPTS.map(([k, t, sub]) => swRow(k, t, sub, !!p[k])).join("")}</div>
+      ${src0?.demo ? `<p class="pop-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0). Di demo, semua resolusi satu server memutar file yang sama.</p>` : ""}</div>`;
+    document.body.append(host);
+    const card = $(".pop", host), r = anchor.getBoundingClientRect(), w = Math.min(innerWidth - 24, 340);
+    card.style.width = w + "px"; const left = Math.min(innerWidth - w - 12, Math.max(12, r.right - w));
+    const h = card.offsetHeight, below = r.bottom + 8 + h < innerHeight - 12;
+    card.style.left = left + "px"; card.style.top = (below ? r.bottom + 8 : Math.max(12, r.top - 8 - h)) + "px";
+    card.style.transformOrigin = `${Math.round(r.left + r.width / 2 - left)}px ${below ? 0 : h}px`;
+    requestAnimationFrame(() => host.classList.add("on"));
+    const close = popClose = () => { popClose = null; host.classList.remove("on"); host.classList.add("off"); setTimeout(() => host.remove(), 200); };
+    host.addEventListener("click", (e) => {
+      const sw = e.target.closest("[data-sw]");
+      if (sw) { const on = sw.getAttribute("aria-checked") !== "true"; setPref(sw.dataset.sw, on); sw.setAttribute("aria-checked", String(on)); return; }
+      if (!e.target.closest(".pop") || e.target.closest('[data-pp="x"]')) close();
+    });
   }
   // kartu pilihan melayang di dekat chip (Pilih Resolusi / Ganti Server)
   let popClose = null;
@@ -177,10 +190,10 @@ export const player = (() => {
   <div class="ap-chips nosrc">
     <button class="pc" data-p="res" aria-label="Ganti resolusi"><i class="pc-b" data-lbl="res">720p</i>Ganti</button>
     <button class="pc" data-p="srv" aria-label="Ganti server"><i class="pc-b" data-lbl="srv">S1</i>Ganti Server</button>
+    <button class="pc" data-p="set" aria-label="Pengaturan putar">${GEAR}Pengaturan</button>
     ${a.trailer ? `<button class="pc" data-p="trailer">${icon("tv", 16, 2)}Trailer</button>` : ""}
     <button class="pc" data-p="info">${icon("info", 16, 2)}Info</button></div>
   ${n ? `<div class="ap-eph"><b>Episode</b><span class="mu sm">${n} episode</span></div><div class="ap-eps">${Array.from({ length: n }, (_, i) => `<button class="ap-e${i + 1 === ep ? " on" : ""}" data-p="ep" data-v="${i + 1}" aria-label="Episode ${i + 1}">${i + 1}</button>`).join("")}</div>` : ""}
-  <div class="ap-set"></div>
   ${a.synopsis ? `<p class="ap-syn">${esc(a.synopsis.slice(0, 360))}${a.synopsis.length > 360 ? "…" : ""}</p>` : ""}
   <div style="height:calc(40px + env(safe-area-inset-bottom))"></div>`;
     drawSettings();
@@ -222,7 +235,7 @@ export const player = (() => {
   }
   function flip(to) {
     if (to === "mini") return toMini();
-    morphing?.cancel?.();
+    morphing?.cancel?.(); pushEntry();
     const v = media(), sh = $(".ap-sheet", root);
     const a = v.getBoundingClientRect();
     sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
@@ -237,13 +250,23 @@ export const player = (() => {
     if (!root) build();
     const same = cur && cur.id === a.id && ep === n && st !== "closed";
     cur = a; list = eps || [];
-    if (st === "closed") { root.hidden = false; setState("full"); if (!reduce()) $(".ap-sheet", root).animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" }); }
+    if (st === "closed") { root.hidden = false; setState("full"); pushEntry(); if (!reduce()) $(".ap-sheet", root).animate([{ transform: "translateY(100%)" }, { transform: "none" }], { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" }); }
     else if (st === "mini") flip("full");
     if (!same) go(n);
   }
-  function minimize() { if (st === "full") { exitFs(); flip("mini"); } }
+  /* Tombol / gestur kembali HP saat pemutar terbuka penuh → jadi jendela melayang, halaman di bawahnya tetap
+     (bukan pindah halaman). Caranya: selama penuh ada satu entri riwayat tambahan dengan alamat yang sama. */
+  let histOn = false, popSkip = 0, afterPop = null;
+  const pushEntry = () => { if (histOn) return; try { history.pushState({ nnPlayer: 1 }, ""); histOn = true; } catch {} };
+  const dropEntry = (then) => { if (!histOn) { then?.(); return; } histOn = false; popSkip++; afterPop = then || null; history.back(); };
+  addEventListener("popstate", () => {
+    if (popSkip) { popSkip--; const f = afterPop; afterPop = null; f?.(); return; }
+    if (histOn) { histOn = false; if (popClose) popClose(); ctl?.closePanel(); if (st === "full") { exitFs(); flip("mini"); } }
+  });
+  function minimize(then) { if (st === "full") { exitFs(); flip("mini"); } dropEntry(then); }
   function close() {
     if (st === "closed") return;
+    dropEntry();
     exitFs();
     const sh = $(".ap-sheet", root);
     const end = () => { stopMedia(); root.hidden = true; setState("closed"); sh.style.transform = ""; sh.style.opacity = ""; };
@@ -276,6 +299,7 @@ export const player = (() => {
     if (!b) return;
     const p = b.dataset.p;
     if (p === "res") { if (vid && src0) pickRes(b); }
+    else if (p === "set") setMenu(b);
     else if (p === "srv") { if (vid && src0) pickSrv(b); }
     else if (p === "min") minimize();
     else if (p === "close") close();
@@ -285,7 +309,7 @@ export const player = (() => {
     else if (p === "next") go(ep + 1);
     else if (p === "ep") go(Number(b.dataset.v));
     else if (p === "trailer") go(0);
-    else if (p === "info") { minimize(); location.hash = aHref(cur.id); }
+    else if (p === "info") { const h = aHref(cur.id); minimize(() => { location.hash = h; }); }
   }
 
   /* ----- geser: penuh → bawah (kecilkan), melayang → atas (buka) / samping (tutup) ----- */
