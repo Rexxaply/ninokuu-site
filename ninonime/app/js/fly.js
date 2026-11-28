@@ -12,7 +12,7 @@ import { aHref } from "./lib.js";
 // potret sebuah sampul: posisi, bentuk, dan cara gambarnya dipotong
 export function shot(cv) {
   const r = cv.getBoundingClientRect(), img = cv.querySelector("img"), c = getComputedStyle(cv), ci = img && getComputedStyle(img);
-  return { r, rad: c.borderRadius || "12px", shadow: c.boxShadow && c.boxShadow !== "none" ? c.boxShadow : "0 0 0 0 rgba(0,0,0,0)",
+  return { r, ir: img ? img.getBoundingClientRect() : r, rad: c.borderRadius || "12px", shadow: c.boxShadow && c.boxShadow !== "none" ? c.boxShadow : "0 0 0 0 rgba(0,0,0,0)",
     src: img?.currentSrc || img?.src || "", pos: ci?.objectPosition || "50% 50%", tf: ci && ci.transform && ci.transform !== "none" ? ci.transform : "matrix(1, 0, 0, 1, 0, 0)" };
 }
 const idOf = (a) => Number((a.getAttribute("href") || "").split("/").pop());
@@ -24,7 +24,7 @@ export function rememberCover(cv) {
   const a = cv.closest('a[href^="#/anime/"]'); tapped = a ? { id: idOf(a), el: cv } : null;
 }
 document.addEventListener("click", (e) => {
-  const a = e.target.closest?.('a[href^="#/anime/"]'); if (!a || a.closest(".tc") || e.defaultPrevented) return;
+  const a = e.target.closest?.('a[href^="#/anime/"]'); if (!a || a.closest(".tc, .cf") || e.defaultPrevented) return;   // 10 Hot Anime: diatur home.js (kartu utuh)
   rememberCover(a.querySelector(".cover"));
 }, true);
 
@@ -45,14 +45,26 @@ export function fly(from, toEl, dur = 420) {
   const img = document.createElement("img"); img.alt = ""; img.decoding = "sync"; img.src = src; g.append(img);
   Object.assign(g.style, { left: b.left + "px", top: b.top + "px", width: b.width + "px", height: b.height + "px", borderRadius: to.rad, boxShadow: to.shadow });
   document.body.append(g);
-  toEl.style.visibility = "hidden";
-  const f = { hide: new Set([toEl]), done: () => {} }; flight = f;
+  img.style.objectPosition = to.pos || "50% 50%";
+  // kartu 10 Hot Anime: seluruh kartu (bingkai bercahaya, mahkota) ikut disembunyikan sampai mendarat,
+  // bukan hanya gambarnya (dulu tersisa bingkai kosong bercahaya di bawah sampul yang terbang)
+  const card = toEl.closest(".cf-card");
+  const f = { hide: new Set([toEl, ...(card ? [card] : [])]), done: () => {} }; flight = f;
+  f.hide.forEach((e) => { e.style.visibility = "hidden"; });
   const ease = "cubic-bezier(.3,.8,.2,1)";
-  const sx = a.width / b.width, sy = a.height / b.height, s = Math.max(sx, sy);
+  const sx = a.width / b.width, sy = a.height / b.height;
   const k = g.animate([
     { transform: `translate3d(${a.left - b.left}px, ${a.top - b.top}px, 0) scale(${sx}, ${sy})` },
     { transform: "translate3d(0, 0, 0) scale(1, 1)" }], { duration: dur, easing: ease, fill: "forwards" });
-  img.animate([{ transform: `scale(${s / sx}, ${s / sy})` }, { transform: "scale(1, 1)" }], { duration: dur, easing: ease, fill: "forwards" });
+  /* gambar di dalam kotak: awal & akhir tepat di posisi gambar ASLI yang terlihat (termasuk zoom/geser paralaks kartu
+     10 Hot Anime), selalu proporsional. Dihitung di koordinat kotak bayangan (yang sedang diskalakan sx, sy). */
+  const place = (ir, ox, oy, kx, ky) => {
+    const U = Math.max(ir.width / b.width, ir.height / b.height) || 1;
+    const cx = (ir.left + ir.width / 2 - ox) / kx, cy = (ir.top + ir.height / 2 - oy) / ky, w = (U * b.width) / kx, h = (U * b.height) / ky;
+    return `translate3d(${cx - w / 2}px, ${cy - h / 2}px, 0) scale(${U / kx}, ${U / ky})`;
+  };
+  img.style.transformOrigin = "0 0";
+  img.animate([{ transform: place(from.ir || a, a.left, a.top, sx, sy) }, { transform: place(to.ir || b, b.left, b.top, 1, 1) }], { duration: dur, easing: ease, fill: "forwards" });
   // mendarat: sampul asli (lengkap dengan bingkai/judulnya) muncul di bawah, bayangan terbang memudar
   const done = f.done = (now) => {
     if (f.end) return; f.end = true;

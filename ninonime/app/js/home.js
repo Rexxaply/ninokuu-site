@@ -91,7 +91,7 @@ function carousel(root, list, extraCleanup) {
   box.addEventListener("click", (e) => {
     if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; return; }
     const c = e.target.closest(".cf-card"); if (!c) return;
-    if (c.classList.contains("on")) { rememberCover(c.querySelector(".tc-cv") || c.querySelector(".cover")); return; }
+    if (c.classList.contains("on")) { rememberCover(c.querySelector(".cf-in")); return; }
     e.preventDefault(); hold(); glide(pos + Math.round(off(cards.indexOf(c))));
   });
   const onResize = () => { if (!box.isConnected) return; measure(); tick(); };

@@ -178,6 +178,19 @@ export const player = (() => {
   // tombol di jendela melayang Android: keadaan putar/jeda & ada episode berikutnya dikirim ke native
   const hasNextEp = () => !!(ep && cur && (!cur.eps || ep < cur.eps));
   const natMedia = () => { try { nat()?.setMedia({ paused: !vid || vid.paused, hasNext: hasNextEp() }); } catch {} };
+  /* Gestur ke layar utama (geser dari bawah / tombol Home) saat video diputar → Android otomatis memindahkan video ke
+     jendela melayang. Supaya mulus seperti YouTube (video yang menyusut, bukan seluruh layar), Android diberi tahu
+     posisi video di layar (sourceRectHint); posisinya dikirim ulang bila berubah (penuh ⇄ melayang, layar diputar). */
+  let lastRect = "";
+  const natRect = () => {
+    const p = nat(); if (!p || !root || document.body.classList.contains("os-pip")) return;
+    const el = vid && st !== "closed" ? $(".ap-vid", root) : null, r = el?.getBoundingClientRect();
+    const v = r && r.width > 40 && r.height > 20 ? [r.left, r.top, r.width, r.height].map((n) => Math.round(n * 10) / 10) : [0, 0, 0, 0];
+    const key = v.join(","); if (key === lastRect) return; lastRect = key;
+    try { p.setHint?.({ x: v[0], y: v[1], w: v[2], h: v[3], dpr: devicePixelRatio || 1 }); } catch {}
+  };
+  setInterval(() => { if (vid && document.visibilityState === "visible") natRect(); }, 700);
+  addEventListener("resize", () => setTimeout(natRect, 120));
   addEventListener("ninopipcmd", (e) => {
     const v = vid; if (!v) return;
     const c = e.detail;
@@ -211,7 +224,7 @@ export const player = (() => {
     setMs("enterpictureinpicture", prefs().autoPip ? () => { if (vid === v && !inPip()) v.requestPictureInPicture().catch(() => {}); } : null);
     const pos = () => { try { if (v.duration && isFinite(v.duration)) ms.setPositionState({ duration: v.duration, position: Math.min(v.currentTime, v.duration), playbackRate: v.playbackRate || 1 }); } catch {} };
     v.addEventListener("loadedmetadata", pos); v.addEventListener("seeked", pos); v.addEventListener("ratechange", pos);
-    v.addEventListener("play", () => { if (ms) ms.playbackState = "playing"; pos(); if (vid === v) { natPlaying(true); natMedia(); } });
+    v.addEventListener("play", () => { if (ms) ms.playbackState = "playing"; pos(); if (vid === v) { natPlaying(true); natMedia(); natRect(); } });
     v.addEventListener("pause", () => { if (ms) ms.playbackState = "paused"; if (vid === v) { natPlaying(false); natMedia(); } });
     v.addEventListener("ended", () => { if (vid === v) { natPlaying(false); natMedia(); } });
     // di dalam aplikasi: pemutar menandai video sedang diputar di jendela melayang sistem
