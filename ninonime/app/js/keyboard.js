@@ -75,15 +75,31 @@ export function initKeyboard() {
   // Kedipan keyboard sesaat setelah pindah kolom (< 0,45 dtk sejak kolom baru disentuh) diabaikan.
   const B = document.body;
   const compact = (on) => B.classList.toggle("kb-compact", on);
-  let rt = 0, wasSmall = false, lastFocus = 0;
+  // keyboard ditutup (tombol ▽ / kembali) sementara kolom masih fokus → kolom dilepas, halaman kembali normal
+  const closed = () => { const a = typingEl(); compact(false); if (a) a.blur(); };
+  // Dulu perubahan layar < 0,45 dtk sejak pindah kolom diabaikan begitu saja. Di APK keyboard berkedip saat
+  // pindah kolom username ⇄ password, jadi kejadian "layar memanjang" saat keyboard benar-benar ditutup bisa
+  // ikut terlewat → halaman tetap rapat & menu bawah tetap tersembunyi. Sekarang keadaan dicek ulang setelah
+  // layar berhenti berubah (bukan diabaikan), dan di APK sinyal tutup keyboard dari Android dipakai langsung.
+  let rt = 0, ct = 0, lastFocus = 0;
+  const check = () => {
+    const a = typingEl(); if (!a) return;
+    if (innerHeight < kbBase - 80) compact(true);
+    else if (performance.now() - lastFocus > 700) closed();
+    else ct = setTimeout(check, 300);   // baru pindah kolom: keyboard mungkin sedang muncul lagi, cek sebentar lagi
+  };
   addEventListener("resize", () => {
     if (!typingEl() && innerHeight > kbBase) kbBase = innerHeight;
-    const small = innerHeight < kbBase - 80, a = typingEl();
-    if (a && wasSmall && !small && performance.now() - lastFocus > 450) { compact(false); a.blur(); }
-    else if (a && small) compact(true);
-    wasSmall = small;
+    clearTimeout(ct); ct = setTimeout(check, 220);
     clearTimeout(rt); rt = setTimeout(center, 160);                          // tunggu layar berhenti berubah
   });
+  const K = plugin();
+  if (K?.addListener) {
+    let hideT = 0;
+    K.addListener("keyboardWillShow", () => { clearTimeout(hideT); if (typingEl()) compact(true); });
+    // kedipan saat pindah kolom: sembunyi lalu langsung muncul lagi → tunggu sebentar sebelum dianggap ditutup
+    K.addListener("keyboardDidHide", () => { clearTimeout(hideT); hideT = setTimeout(closed, 250); });
+  }
   addEventListener("focusin", () => { if (!typingEl()) return; lastFocus = performance.now(); B.classList.add("kb-typing"); compact(true); setTimeout(center, 420); });
   addEventListener("focusout", () => setTimeout(() => { if (!typingEl()) { B.classList.remove("kb-typing"); compact(false); } }, 120));
 }
