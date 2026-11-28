@@ -4,7 +4,7 @@ import { esc, icon, $, toast } from "./ui.js";
 import { DAYS, MONTHS } from "./const.js";
 import { A, hhmm, wibSlot } from "./data.js";
 import { FK, favs, isFav, statusName, toggleFav } from "./fav.js";
-import { adoptFly, fly, setBackFly, takeMorph } from "./fly.js";
+import { adoptFly, fly, setBackFly, shot, takeMorph } from "./fly.js";
 import { aHref, acv, errHtml, fmtScore, hist } from "./lib.js";
 import { player } from "./player.js";
 
@@ -25,7 +25,7 @@ export async function vDetail(view, x, id) {
   // kerangka langsung tampil (poster dari sampul yang diketuk), data menyusul
   view.innerHTML = `<div class="ad">${bar()}<div class="ad-hero"><span class="ad-bg"${from?.src ? ` style="background-image:url('${esc(from.src)}')"` : ""}></span>
     <span class="cover adp${from?.src ? "" : " sk"}">${from?.src ? `<img src="${esc(from.src)}" alt="">` : ""}</span><span class="sk sk-l ad-skt"></span><span class="sk sk-l s ad-skt"></span></div></div>`;
-  if (from) fly(from.r, $(".cover.adp", view), from.src, 440, from.rad);
+  if (from) fly(from, $(".cover.adp", view), 460);
   x.setActs({ back: () => x.back("#/home"), retry: () => vDetail(view, x, id) });
   let a, eps = [], thumbs = {};
   try { a = await A.detail(id); } catch (e) { view.innerHTML = `<div class="ad">${bar()}${errHtml(e)}</div>`; return; }
@@ -81,7 +81,7 @@ export async function vDetail(view, x, id) {
   addEventListener("scroll", onScroll, { passive: true }); onScroll();
   x.setCleanup(() => {
     removeEventListener("scroll", onScroll); cancelAnimationFrame(pr);
-    const p = $(".cover.adp", view); if (p) { const r = p.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) setBackFly({ id, r, rad: getComputedStyle(p).borderRadius, src: a.cover, at: Date.now() }); }
+    const p = $(".cover.adp", view); if (p) { const r = p.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) setBackFly({ id, ...shot(p), at: Date.now() }); }
   });
   const redrawEps = () => { const el = $("#eps"); if (el) el.innerHTML = epList(); };
   x.setActs({
