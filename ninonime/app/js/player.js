@@ -1,7 +1,7 @@
 // NinoNime · modul anime/player (dipecah dari anime.js)
-import { choose, esc, icon, $, $$, toast } from "./ui.js";
+import { esc, icon, $, $$, toast } from "./ui.js";
 import { episodeSource } from "./sources.js";
-import { mountControls, prefs, setPref, SPEEDS } from "./vctl.js";
+import { mountControls, prefs, setPref } from "./vctl.js";
 import * as api from "./api.js";
 import { aHref, acv, hist, saveHist } from "./lib.js";
 
@@ -29,7 +29,7 @@ export const player = (() => {
     <span class="ap-mt"><b></b><span></span></span>
     <button class="ap-mb" data-p="pp" aria-label="Putar / jeda">${icon("pause", 22, 2.2)}</button>
     <button class="ap-mb" data-p="close" aria-label="Tutup">${icon("x", 22, 2.2)}</button>
-    <span class="ap-bar"><i></i></span></div>
+    <span class="ap-bar"><i></i></span><span class="ap-grip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
   <div class="ap-body"><span class="ap-grab" aria-hidden="true"></span><div class="ap-info"></div></div>
 </div>`;
     document.body.append(root);
@@ -67,8 +67,13 @@ export const player = (() => {
       const myVid = vid, epNow = ep;
       ctl = mountControls(m, vid, {
         intro: src.intro, endingFromEnd: src.endingFromEnd,
+        title: () => `Ep ${ep} - ${cur.title}`,
+        hasPrev: () => ep > 1, onPrev: () => { if (vid === myVid && ep > 1) go(ep - 1); },
         hasNext: () => !!(ep && (!cur.eps || ep < cur.eps)),
         onNext: () => { if (vid === myVid && ep === epNow) go(ep + 1); },
+        onMin: () => minimize(), onFs: () => (fs ? exitFs() : enterFs()),
+        res: () => ({ cur: srvI, items: resItems() }), onRes: (k) => setServer(Number(k)),
+        eps: () => ({ cur: ep, n: epTotal() }), onEp: (n) => { if (n !== ep) go(n); },
         // server gagal dimuat → coba server berikutnya otomatis
         // sumber gagal dimuat → pindah ke server berikutnya (resolusi sama bila ada)
         onError: () => { if (vid !== myVid) return; const cur0 = opts[srvI];
@@ -77,9 +82,10 @@ export const player = (() => {
       });
       drawSettings();
       const h = hist().find((y) => y.id === cur.id && Number(y.ep) === ep);
-      vid.addEventListener("loadedmetadata", () => { if (h?.t > 5 && h.t < vid.duration - 10) vid.currentTime = h.t; }, { once: true });
+      const v = vid, a0 = cur, e0 = ep;   // pendengar memakai video ini sendiri (vid bisa sudah berganti episode)
+      v.addEventListener("loadedmetadata", () => { if (h?.t > 5 && h.t < v.duration - 10) v.currentTime = h.t; }, { once: true });
       let lastSave = 0;
-      vid.addEventListener("timeupdate", () => { const b = $(".ap-bar i", root); if (b && vid.duration) b.style.width = (vid.currentTime / vid.duration) * 100 + "%"; if (Date.now() - lastSave > 5000) { lastSave = Date.now(); saveHist(cur, ep, vid.currentTime, vid.duration); } });
+      v.addEventListener("timeupdate", () => { if (vid !== v) return; const b = $(".ap-bar i", root); if (b && v.duration) b.style.width = (v.currentTime / v.duration) * 100 + "%"; if (Date.now() - lastSave > 5000) { lastSave = Date.now(); saveHist(a0, e0, v.currentTime, v.duration); } });
       vid.addEventListener("play", syncPP); vid.addEventListener("pause", syncPP);
     }
     syncPP();
@@ -91,36 +97,55 @@ export const player = (() => {
   function setServer(i) {
     if (!vid || !src0 || !opts[i]) return;
     const t = vid.currentTime, playing = !vid.paused; srvI = i; api.lsSet("playerSrc", { s: opts[i].s, q: opts[i].q });
-    vid.src = opts[i].url;
-    vid.addEventListener("loadedmetadata", () => { if (t > 1) vid.currentTime = t; if (playing) vid.play().catch(() => {}); }, { once: true });
+    const v = vid; v.src = opts[i].url;
+    v.addEventListener("loadedmetadata", () => { if (t > 1) v.currentTime = t; if (playing) v.play().catch(() => {}); }, { once: true });
     drawSettings();
   }
-  // pengaturan di bawah video: server (dropdown), kecepatan, lewati ending otomatis, episode berikutnya otomatis
+  const RES_TAG = { "2160p": "4K", "1440p": "2K", "1080p": "FHD", "720p": "HD", "480p": "SD", "360p": "SD" };
+  const servers = () => [...new Set(opts.map((o) => o.s))];
+  // resolusi di server yang sedang dipakai
+  const resItems = () => opts.map((o, i) => [o, i]).filter(([o]) => o.s === opts[srvI]?.s).map(([o, i]) => ({ v: i, label: o.q || o.s, tag: RES_TAG[o.q] || "" }));
+  const epTotal = () => Math.max(cur?.eps || 0, list.length, ep);
+  // chip [720p | Ganti] dan [S1 | Ganti Server] + kartu sakelar putar otomatis
   function drawSettings() {
-    const box = root && $(".ap-set", root); if (!box) return;
-    if (!vid || !src0) { box.innerHTML = ""; return; }
+    const box = root && $(".ap-set", root), chips = root && $(".ap-chips", root);
+    const has = !!(vid && src0 && opts[srvI]);
+    if (chips) { chips.classList.toggle("nosrc", !has); if (has) { $('[data-lbl="res"]', chips).textContent = opts[srvI].q || "Auto"; $('[data-lbl="srv"]', chips).textContent = "S" + (servers().indexOf(opts[srvI].s) + 1); } }
+    ctl?.labels();
+    if (!box) return;
+    if (!has) { box.innerHTML = ""; return; }
     const p = prefs();
     const sw = (k, t, sub) => `<label class="ps-row ps-sw"><span class="ps-l"><b>${t}</b><span>${sub}</span></span><input type="checkbox" role="switch" data-ps="${k}" ${p[k] ? "checked" : ""}><i class="ps-tg" aria-hidden="true"></i></label>`;
     box.innerHTML = `<div class="ps">
-      <div class="ps-row"><span class="ps-l"><b>Server</b><span>Server &amp; resolusi video</span></span><button class="ps-pick" data-pk="server" aria-haspopup="dialog">${esc(optName(opts[srvI]))}${icon("chev", 14, 2.4)}</button></div>
-      <div class="ps-row"><span class="ps-l"><b>Kecepatan</b><span>Kecepatan putar video</span></span><button class="ps-pick" data-pk="speed" aria-haspopup="dialog">${speedName(p.speed)}${icon("chev", 14, 2.4)}</button></div>
       ${sw("autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai")}
       ${sw("autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai")}
       ${src0.demo ? `<p class="ps-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0). Di demo, semua resolusi satu server memutar file yang sama.</p>` : ""}</div>`;
   }
-  const optName = (o) => (o ? (o.q ? `${o.q} ${o.s}` : o.s) : "");
-  const speedName = (v) => (Number(v) === 1 ? "Normal" : `${v}×`);
-  const RES_TAG = { "2160p": "4K", "1440p": "2K", "1080p": "FHD", "720p": "HD", "480p": "SD", "360p": "SD" };
-  // tombol Server / Kecepatan → lembar pilihan NinoNime (bukan dropdown bawaan)
-  async function pickSetting(k) {
-    if (k === "server") {
-      const groups = [...new Set(opts.map((o) => o.s))].map((g) => ({ label: g, items: opts.map((o, i) => [o, i]).filter(([o]) => o.s === g).map(([o, i]) => ({ v: i, label: o.q || g, sub: o.q ? g : "", tag: RES_TAG[o.q] || "" })) }));
-      const v = await choose({ title: "Server & resolusi", value: srvI, groups });
-      if (v != null && Number(v) !== srvI) setServer(Number(v));
-    } else if (k === "speed") {
-      const v = await choose({ title: "Kecepatan putar", value: prefs().speed, groups: [{ items: SPEEDS.map((x) => ({ v: x, label: speedName(x), sub: x === 1 ? "Kecepatan asli" : "" })) }] });
-      if (v != null) { setPref("speed", Number(v)); if (vid) vid.playbackRate = Number(v); drawSettings(); }
-    }
+  // kartu pilihan melayang di dekat chip (Pilih Resolusi / Ganti Server)
+  let popClose = null;
+  function popCard(anchor, { title, items, cur: curV, onPick, compact }) {
+    popClose?.();
+    const host = document.createElement("div"); host.className = "pop-host";
+    host.innerHTML = `<div class="pop${compact ? " compact" : ""}" role="dialog" aria-label="${esc(title)}">${compact ? "" : `<div class="pop-h"><b>${esc(title)}</b><button class="pop-x" data-pp="x" aria-label="Tutup">${icon("x", 18, 2.4)}</button></div>`}
+      <div class="pop-l">${items.map((it) => { const on = String(it.v) === String(curV); return `<button class="pop-o${on ? " on" : ""}" data-pp="v" data-k="${esc(it.v)}" aria-pressed="${on}">${it.badge ? `<i class="pop-b">${esc(it.badge)}</i>` : ""}<b>${esc(it.label)}</b>${it.tag ? `<span>${esc(it.tag)}</span>` : ""}</button>`; }).join("")}</div></div>`;
+    document.body.append(host);
+    const card = $(".pop", host), r = anchor.getBoundingClientRect(), w = Math.min(innerWidth - 24, compact ? 240 : 360);
+    card.style.width = w + "px";
+    const left = compact ? Math.min(innerWidth - w - 12, Math.max(12, r.left)) : (innerWidth - w) / 2;
+    const h = card.offsetHeight, below = r.bottom + 8 + h < innerHeight - 12;
+    card.style.left = left + "px"; card.style.top = (below ? r.bottom + 8 : Math.max(12, r.top - 8 - h)) + "px";
+    card.style.transformOrigin = `${Math.round(r.left + r.width / 2 - left)}px ${below ? 0 : h}px`;
+    requestAnimationFrame(() => host.classList.add("on"));
+    const close = popClose = (v) => { popClose = null; host.classList.remove("on"); host.classList.add("off"); setTimeout(() => host.remove(), 200); if (v != null) onPick(v); };
+    host.addEventListener("click", (e) => { const b = e.target.closest("[data-pp]"); if (!b) { close(); return; } if (b.dataset.pp === "x") close(); else close(b.dataset.k); });
+  }
+  function pickRes(anchor) {
+    popCard(anchor, { title: "Pilih Resolusi", items: resItems(), cur: srvI, onPick: (k) => { if (Number(k) !== srvI) setServer(Number(k)); } });
+  }
+  function pickSrv(anchor) {
+    const sv = servers(), q0 = opts[srvI]?.q;
+    popCard(anchor, { title: "Ganti Server", compact: true, cur: opts[srvI]?.s, items: sv.map((n, i) => ({ v: n, label: n, badge: "S" + (i + 1) })),
+      onPick: (name) => { if (name === opts[srvI]?.s) return; let k = opts.findIndex((o) => o.s === name && o.q === q0); if (k < 0) k = opts.findIndex((o) => o.s === name); if (k >= 0) { setServer(k); toast(`Server ${name}${opts[k].q ? " · " + opts[k].q : ""}`); } } });
   }
   function onSetting(e) {
     const t = e.target.closest?.("[data-ps]"); if (!t) return;
@@ -148,18 +173,18 @@ export const player = (() => {
     $(".ap-mt b", root).textContent = a.title;
     $(".ap-mt span", root).textContent = ep ? `Episode ${ep}` : "Trailer";
     $(".ap-info", root).innerHTML = `
-  <div class="ap-h">${acv(a.cover, a.title, "sm")}<div class="col g4 grow"><b class="ap-t">${esc(a.title)}</b><span class="mu sm">${ep ? `Episode ${ep}${e?.title && !/^episode\s*\d+$/i.test(e.title) ? " · " + esc(e.title) : ""}` : "Trailer resmi"}</span></div></div>
-  <div class="ap-acts">
-    <button class="pill-btn" data-p="prev" ${ep > 1 ? "" : "disabled"}>${icon("back", 16, 2)}Sebelumnya</button>
-    <button class="pill-btn" data-p="next" ${ep && (!a.eps || ep < a.eps) && (!n || ep < n) ? "" : "disabled"}>Berikutnya${icon("next", 16, 2)}</button>
-    ${a.trailer ? `<button class="pill-btn" data-p="trailer">${icon("tv", 16, 2)}Trailer</button>` : ""}
-    <button class="pill-btn" data-p="info">${icon("info", 16, 2)}Info</button></div>
+  <div class="ap-hd"><b class="ap-t">${esc(a.title)}</b><span class="ap-sub">${ep ? `Episode ${ep}${e?.title && !/^episode\s*\d+$/i.test(e.title) ? " · " + esc(e.title) : ""}` : "Trailer resmi"}</span></div>
+  <div class="ap-chips nosrc">
+    <button class="pc" data-p="res" aria-label="Ganti resolusi"><i class="pc-b" data-lbl="res">720p</i>Ganti</button>
+    <button class="pc" data-p="srv" aria-label="Ganti server"><i class="pc-b" data-lbl="srv">S1</i>Ganti Server</button>
+    ${a.trailer ? `<button class="pc" data-p="trailer">${icon("tv", 16, 2)}Trailer</button>` : ""}
+    <button class="pc" data-p="info">${icon("info", 16, 2)}Info</button></div>
+  ${n ? `<div class="ap-eph"><b>Episode</b><span class="mu sm">${n} episode</span></div><div class="ap-eps">${Array.from({ length: n }, (_, i) => `<button class="ap-e${i + 1 === ep ? " on" : ""}" data-p="ep" data-v="${i + 1}" aria-label="Episode ${i + 1}">${i + 1}</button>`).join("")}</div>` : ""}
   <div class="ap-set"></div>
   ${a.synopsis ? `<p class="ap-syn">${esc(a.synopsis.slice(0, 360))}${a.synopsis.length > 360 ? "…" : ""}</p>` : ""}
-  ${n ? `<div class="sec-h"><h2>Daftar episode</h2><span class="mu sm">${n} episode</span></div><div class="ep-grid">${Array.from({ length: n }, (_, i) => `<button class="ep-b${i + 1 === ep ? " on" : ""}" data-p="ep" data-v="${i + 1}">${i + 1}</button>`).join("")}</div>` : ""}
   <div style="height:calc(40px + env(safe-area-inset-bottom))"></div>`;
     drawSettings();
-    requestAnimationFrame(() => $(".ap-info .ep-b.on", root)?.scrollIntoView({ block: "nearest", inline: "center" }));
+    requestAnimationFrame(() => { const b = $(".ap-eps .ap-e.on", root); if (b) b.parentElement.scrollLeft = b.offsetLeft - b.parentElement.clientWidth / 2 + b.offsetWidth / 2; });
   }
   async function go(n) {
     ep = n; info();
@@ -179,7 +204,7 @@ export const player = (() => {
     const v = media(), sh = $(".ap-sheet", root);
     const a = v.getBoundingClientRect();
     sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
-    setState("mini");
+    applyMiniPos(); setState("mini");
     if (reduce()) return;
     const b = sh.getBoundingClientRect(), mw = v.getBoundingClientRect().width;
     morphing?.cancel?.();
@@ -226,7 +251,7 @@ export const player = (() => {
     sh.animate([{ transform: sh.style.transform || "none", opacity: 1 }, { transform: (sh.style.transform || "") + (st === "mini" ? " translateY(120%)" : " translateY(100%)"), opacity: st === "mini" ? 0 : 1 }], { duration: 240, easing: "ease-in" }).onfinish = end;
   }
   // tombol kembali HP (dipanggil dari main.js): pemutar penuh → kecilkan dulu, tidak meninggalkan halaman
-  const onBack = () => { if (fs) { exitFs(); return true; } if (st === "full") { minimize(); return true; } return false; };
+  const onBack = () => { if (popClose) { popClose(); return true; } if (ctl?.closePanel()) return true; if (fs) { exitFs(); return true; } if (st === "full") { minimize(); return true; } return false; };
 
   /* ----- layar penuh (miring) ----- */
   let fs = false;
@@ -245,12 +270,14 @@ export const player = (() => {
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fs) exitFs(); });
 
   function onClick(e) {
-    const pk = e.target.closest("[data-pk]"); if (pk && st === "full") { pickSetting(pk.dataset.pk); return; }
     const b = e.target.closest("[data-p]");
+    if (st === "mini" && Date.now() - dragged < 400) return;
     if (st === "mini" && !b) { flip("full"); return; }
     if (!b) return;
     const p = b.dataset.p;
-    if (p === "min") minimize();
+    if (p === "res") { if (vid && src0) pickRes(b); }
+    else if (p === "srv") { if (vid && src0) pickSrv(b); }
+    else if (p === "min") minimize();
     else if (p === "close") close();
     else if (p === "pp") toggle();
     else if (p === "fs") fs ? exitFs() : enterFs();
@@ -262,6 +289,9 @@ export const player = (() => {
   }
 
   /* ----- geser: penuh → bawah (kecilkan), melayang → atas (buka) / samping (tutup) ----- */
+  // posisi jendela melayang: tepi kiri/kanan + geser vertikal (diingat selama aplikasi terbuka)
+  const miniPos = { side: "right", y: 0 }; let dragged = 0;
+  const applyMiniPos = () => { root.classList.toggle("mleft", miniPos.side === "left"); root.style.setProperty("--my", miniPos.y + "px"); };
   function bindDrag() {
     const sh = $(".ap-sheet", root), body = $(".ap-body", root);
     let y0 = 0, x0 = 0, dy = 0, dx = 0, t0 = 0, on = false, axis = "";
@@ -270,7 +300,7 @@ export const player = (() => {
       if (fs || e.touches.length > 1) return;
       const inBody = body.contains(e.target);
       if (st === "full" && inBody && body.scrollTop > 0) return;
-      if (e.target.closest("iframe, video, .vc-seek, .vc-b, .vc-skip, .vc-next, .ap-set")) return;
+      if (e.target.closest("iframe, video, .vc-seek, .vc-b, .vc-i, .vc-sp, .vc-pn, .vc-skip, .vc-next, .ap-set, .ap-chips, .ap-eps")) return;
       y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = dx = 0; t0 = Date.now(); on = true; axis = "";
     }, { passive: true });
     sh.addEventListener("touchmove", (e) => {
@@ -285,9 +315,7 @@ export const player = (() => {
         root.style.setProperty("--p", p.toFixed(3));
       } else if (st === "mini") {
         if (e.cancelable) e.preventDefault();
-        sh.style.transition = "none";
-        if (axis === "x") { sh.style.transform = `translateX(${dx}px)`; sh.style.opacity = String(Math.max(0.2, 1 - Math.abs(dx) / 260)); }
-        else if (dy < 0) sh.style.transform = `translateY(${Math.max(dy, -140) * 0.6}px)`;
+        sh.style.transition = "none"; sh.style.transform = `translate(${dx}px, ${dy}px)`;
       }
     }, { passive: false });
     const end = () => {
@@ -298,10 +326,15 @@ export const player = (() => {
         if (axis === "y" && (dy > 110 || (vel > 0.6 && dy > 30))) minimize();
         else { sh.animate([{ transform: sh.style.transform }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.8,.2,1)" }); sh.style.transform = ""; root.style.removeProperty("--p"); }
       } else if (st === "mini") {
-        if (axis === "x" && Math.abs(dx) > 90) { sh.style.opacity = ""; close(); return; }
-        if (axis === "y" && dy < -40) { sh.style.transform = ""; flip("full"); return; }
-        sh.animate([{ transform: sh.style.transform, opacity: sh.style.opacity || 1 }, { transform: "none", opacity: 1 }], { duration: 200, easing: "ease-out" });
-        sh.style.transform = ""; sh.style.opacity = "";
+        if (!axis) return;   // hanya ketukan → onClick membuka penuh
+        dragged = Date.now();   // klik sesudah menyeret tidak membuka pemutar
+        // dilempar keluar layar ke samping → tutup; selain itu menempel ke tepi kiri / kanan terdekat
+        const r = sh.getBoundingClientRect(), cx = r.left + r.width / 2;
+        if (r.right < 70 || r.left > innerWidth - 70) { sh.style.opacity = "0"; close(); return; }
+        const side = cx < innerWidth / 2 ? "left" : "right";
+        miniPos.side = side; miniPos.y = Math.min(0, Math.max(-(innerHeight - 260), miniPos.y + dy));
+        const a = sh.getBoundingClientRect(); sh.style.transform = ""; applyMiniPos(); const b = sh.getBoundingClientRect();
+        sh.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px)` }, { transform: "none" }], { duration: 320, easing: "cubic-bezier(.32,.72,0,1)" });
       }
     };
     sh.addEventListener("touchend", end); sh.addEventListener("touchcancel", end);
