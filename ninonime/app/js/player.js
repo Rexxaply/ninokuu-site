@@ -1,5 +1,5 @@
 // NinoNime · modul anime/player (dipecah dari anime.js)
-import { esc, icon, $ } from "./ui.js";
+import { esc, icon, $, $$ } from "./ui.js";
 import { episodeSource } from "./sources.js";
 import { aHref, acv, hist, saveHist } from "./lib.js";
 
@@ -106,7 +106,40 @@ export const player = (() => {
 
   /* ----- buka / kecilkan / tutup (animasi FLIP: video berpindah halus antara penuh ↔ melayang) ----- */
   const reduce = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+  /* penuh → melayang: seluruh kotak pemutar menyusut dari posisi video ke kotak melayang (bukan hanya videonya,
+     yang dulu terpotong oleh kotak mini → kotak tampak kosong sesaat). Isi di bawah video memudar dari salinannya. */
+  let morphing = null;
+  function toMini() {
+    const v = media(), sh = $(".ap-sheet", root), body = $(".ap-body", root);
+    const a = v.getBoundingClientRect(), s0 = sh.getBoundingClientRect(), bd = body.getBoundingClientRect();
+    // tirai: salinan isi pemutar (latar + info) di tempatnya semula, lalu memudar → halaman di bawah muncul perlahan
+    const veil = document.createElement("div"); veil.className = "ap-veil";
+    veil.style.cssText = `left:${s0.left}px;top:${s0.top}px;width:${s0.width}px;height:${s0.height}px`;
+    const copy = body.cloneNode(true); copy.className = "ap-copy";   // bukan .ap-body: itu disembunyikan saat melayang
+    copy.style.cssText = `position:absolute;left:${bd.left - s0.left}px;top:${bd.top - s0.top}px;width:${bd.width}px;height:${bd.height}px;opacity:${getComputedStyle(body).opacity}`;
+    veil.append(copy); document.body.append(veil); copy.scrollTop = body.scrollTop;
+    sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
+    setState("mini");
+    if (reduce()) { veil.remove(); return; }
+    const b = sh.getBoundingClientRect(), mw = v.getBoundingClientRect().width;
+    morphing?.cancel?.();
+    root.classList.add("morph");
+    const ease = "cubic-bezier(.32,.72,0,1)", dur = 420;
+    const k = sh.animate([
+      { left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", borderRadius: "0px", backgroundColor: "rgba(0,0,0,1)" },
+      { left: b.left + "px", top: b.top + "px", width: b.width + "px", height: b.height + "px", borderRadius: "18px" }],
+      { duration: dur, easing: ease });
+    v.animate([{ width: a.width + "px" }, { width: mw + "px" }], { duration: dur, easing: ease });
+    $$(".ap-mt, .ap-mb, .ap-bar", root).forEach((el) => el.animate([{ opacity: 0, transform: "translateX(-8px)" }, { opacity: 1, transform: "none" }], { duration: 220, delay: dur * 0.55, easing: "ease-out", fill: "backwards" }));
+    veil.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: "ease-out", fill: "forwards" });
+    copy.animate([{ transform: "none" }, { transform: "translateY(36px)" }], { duration: 300, easing: "ease-in" });
+    morphing = k;
+    const done = () => { if (morphing === k) { morphing = null; root.classList.remove("morph"); } veil.remove(); };
+    k.onfinish = done; k.oncancel = done; setTimeout(() => veil.remove(), dur + 200);
+  }
   function flip(to) {
+    if (to === "mini") return toMini();
+    morphing?.cancel?.();
     const v = media(), sh = $(".ap-sheet", root);
     const a = v.getBoundingClientRect();
     sh.style.transform = ""; sh.style.transition = ""; v.style.transform = ""; root.style.removeProperty("--p");
@@ -116,7 +149,6 @@ export const player = (() => {
     const sx = a.width / b.width, sy = a.height / b.height;
     v.animate([{ transformOrigin: "0 0", transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${sx}, ${sy})` }, { transformOrigin: "0 0", transform: "none" }], { duration: 340, easing: "cubic-bezier(.2,.8,.2,1)" });
     if (to === "full") { $(".ap-body", root).animate([{ opacity: 0, transform: "translateY(40px)" }, { opacity: 1, transform: "none" }], { duration: 300, easing: "ease-out" }); $(".ap-dim", root).animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); }
-    else $(".ap-mt", root).animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 120, fill: "backwards" });
   }
   function open(a, n = 1, eps = []) {
     if (!root) build();

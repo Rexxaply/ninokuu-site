@@ -17,6 +17,7 @@ export const rerender = () => renderFn();
 // aksi tombol [data-act] di halaman aktif
 let acts = {};
 export const setActs = (a) => { acts = a; };
+export const getActs = () => acts;
 view.addEventListener("click", (e) => {
   const el = e.target.closest("[data-act]"); if (!el || !view.contains(el)) return;
   const fn = acts[el.dataset.act]; if (fn) { e.preventDefault(); fn(el, e); }

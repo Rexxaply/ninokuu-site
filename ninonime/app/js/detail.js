@@ -4,7 +4,7 @@ import { esc, icon, $, toast } from "./ui.js";
 import { DAYS, MONTHS } from "./const.js";
 import { A, hhmm, wibSlot } from "./data.js";
 import { FK, favs, isFav, statusName, toggleFav } from "./fav.js";
-import { fly, setBackFly, takeMorph } from "./fly.js";
+import { adoptFly, fly, setBackFly, takeMorph } from "./fly.js";
 import { errHtml, fmtScore, hist } from "./lib.js";
 import { player } from "./player.js";
 
@@ -19,7 +19,7 @@ export async function vDetail(view, x, id) {
   // kerangka langsung tampil (poster dari sampul yang diketuk), data menyusul
   view.innerHTML = `<div class="ad">${bar()}<div class="ad-hero"><span class="ad-bg"${from?.src ? ` style="background-image:url('${esc(from.src)}')"` : ""}></span>
     <span class="cover adp${from?.src ? "" : " sk"}">${from?.src ? `<img src="${esc(from.src)}" alt="">` : ""}</span><span class="sk sk-l ad-skt"></span><span class="sk sk-l s ad-skt"></span></div></div>`;
-  if (from) fly(from.r, $(".cover.adp", view), from.src);
+  if (from) fly(from.r, $(".cover.adp", view), from.src, 440, from.rad);
   x.setActs({ back: () => x.back("#/home"), retry: () => vDetail(view, x, id) });
   let a, eps = [], thumbs = {};
   try { a = await A.detail(id); } catch (e) { view.innerHTML = `<div class="ad">${bar()}${errHtml(e)}</div>`; return; }
@@ -58,12 +58,13 @@ export async function vDetail(view, x, id) {
 </div><div class="pad-nav"></div></div>`;
   };
   draw();
+  adoptFly($(".cover.adp", view));   // poster baru (setelah data tiba) tetap tersembunyi sampai sampul yang terbang mendarat
   // judul muncul di bar atas setelah poster tergulir lewat
   const onScroll = () => { const b = $(".ad-bar", view); if (b) b.classList.toggle("solid", window.scrollY > 260); };
   addEventListener("scroll", onScroll, { passive: true }); onScroll();
   x.setCleanup(() => {
     removeEventListener("scroll", onScroll);
-    const p = $(".cover.adp", view); if (p) { const r = p.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) setBackFly({ id, r, src: a.cover, at: Date.now() }); }
+    const p = $(".cover.adp", view); if (p) { const r = p.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) setBackFly({ id, r, rad: getComputedStyle(p).borderRadius, src: a.cover, at: Date.now() }); }
   });
   const redrawEps = () => { const el = $("#eps"); if (el) el.innerHTML = epList(); };
   x.setActs({

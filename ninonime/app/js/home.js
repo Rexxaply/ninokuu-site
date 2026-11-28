@@ -97,7 +97,7 @@ function carousel(root, list, extraCleanup) {
   const onResize = () => { if (!box.isConnected) return; measure(); tick(); };
   addEventListener("resize", onResize, { passive: true });
   // berganti otomatis: hanya saat terlihat di layar, aplikasi terbuka, dan tidak sedang disentuh
-  timer = setInterval(() => { if (!hidden && !drag && !anim && document.visibilityState === "visible" && performance.now() > pauseUntil) glide(Math.round(pos) + 1); }, 3500);
+  timer = setInterval(() => { if (!hidden && box.offsetParent && !drag && !anim && document.visibilityState === "visible" && performance.now() > pauseUntil) glide(Math.round(pos) + 1); }, 3500);
   const io = new IntersectionObserver((es) => { hidden = !es[0].isIntersecting; }, { threshold: 0.3 });
   io.observe(box);
   measure(); tick();
@@ -105,19 +105,21 @@ function carousel(root, list, extraCleanup) {
 }
 
 // --- Beranda anime ---
+// kartu "Lanjut nonton" (digambar ulang saat kembali ke Beranda: riwayat bisa berubah karena menonton)
+const resumeHtml = () => { const last = hist()[0]; return last ? `<section class="sec s16"><h2 class="cap">Lanjut nonton</h2>
+  <a class="resume an-res" href="${aHref(last.id)}" data-act="resume">${acv(last.cover, last.title, "rs")}
+    <span class="rc-mid g6"><span class="meta"><span class="tag-s">Episode ${esc(last.ep)}</span></span><span class="rs-t">${esc(last.title)}</span>
+      <span class="mu sm">${last.dur ? `${hhmm(Math.floor(last.t / 60))} dari ${hhmm(Math.floor(last.dur / 60))}` : "Ketuk untuk lanjut"}</span>
+      <span class="prog"><span style="width:${last.dur ? Math.max(4, Math.round((last.t / last.dur) * 100)) : 6}%"></span></span></span>
+    <span class="play">${icon("play", 19, 2)}</span></a></section>` : ""; };
+
 export async function vHome(view, x) {
-  const h = hist(), last = h[0];
   const wn = wibNow();
   view.innerHTML = `
 <header class="top"><span class="an-logo"><img class="logo nn-logo" src="icons/logo.png" alt="NinoNime" width="147" height="34"></span>
   <span class="top-r">${x.topRight || ""}</span></header>
 <section class="hello"><h1>Mau nonton apa <span class="gold">hari ini</span>?</h1><span class="mu sm">${DAYS[wn.day]}, ${wn.date.getUTCDate()} ${MONTHS[wn.date.getUTCMonth()]} · jam tayang dalam WIB</span></section>
-${last ? `<section class="sec s16"><h2 class="cap">Lanjut nonton</h2>
-  <a class="resume an-res" href="${aHref(last.id)}" data-act="resume">${acv(last.cover, last.title, "rs")}
-    <span class="rc-mid g6"><span class="meta"><span class="tag-s">Episode ${esc(last.ep)}</span></span><span class="rs-t">${esc(last.title)}</span>
-      <span class="mu sm">${last.dur ? `${hhmm(Math.floor(last.t / 60))} dari ${hhmm(Math.floor(last.dur / 60))}` : "Ketuk untuk lanjut"}</span>
-      <span class="prog"><span style="width:${last.dur ? Math.max(4, Math.round((last.t / last.dur) * 100)) : 6}%"></span></span></span>
-    <span class="play">${icon("play", 19, 2)}</span></a></section>` : ""}
+<div id="resumeBox">${resumeHtml()}</div>
 <section class="sec s24 nox"><div class="sec-h px"><h2>Tayang hari ini</h2><a class="link-red" href="#/jadwal">Lihat jadwal</a></div><div class="hs an-today" id="today">${`<span class="an-tm"><span class="sk an-tm-sk"></span></span>`.repeat(4)}</div></section>
 <section class="sec s26 nox"><div class="sec-h px"><h2>Top 10 sedang tayang</h2><span class="mu sm" id="tcN"></span></div><div class="cf" id="atop"><div class="cf-sk sk"></div><div class="cf-sk sk"></div><div class="cf-sk sk"></div></div></section>
 <section class="sec s26"><div class="sec-h"><h2>Musim ini</h2><span class="mu sm" id="seasonN"></span></div><div id="season">${skCards(6)}</div>
@@ -129,7 +131,7 @@ ${last ? `<section class="sec s16"><h2 class="cap">Lanjut nonton</h2>
     try {
       const r = await A.now(page);
       items = more ? uniq(items.concat(r.items)) : r.items; next = r.next;
-      if (!$("#season")) return;
+      if (!x.alive() || !$("#season")) return;
       $("#season").innerHTML = items.length ? `<div class="an-grid">${items.map((a, i) => acard(a, more ? 0 : i)).join("")}</div>` : `<div class="empty"><b>Belum ada data</b></div>`;
       $("#aMore").hidden = !next;
     } catch (e) { if (more) { page--; toast(e.message); } else if ($("#season")) $("#season").innerHTML = errHtml(e); }
@@ -139,6 +141,7 @@ ${last ? `<section class="sec s16"><h2 class="cap">Lanjut nonton</h2>
   io.observe($("#aMore"));
   x.setCleanup(() => io.disconnect());
   x.setActs({ retry: () => vHome(view, x), ...x.topActs });
+  x.setReturn?.(() => { const el = $("#resumeBox", view); if (el) { const v = resumeHtml(); if (el.innerHTML !== v) el.innerHTML = v; } });
   x.refreshDots?.();
   const loadToday = async () => {
     try {

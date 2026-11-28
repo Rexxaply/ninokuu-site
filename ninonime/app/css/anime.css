@@ -235,6 +235,10 @@ body.short.nav-off .ap.mini .ap-sheet { bottom: calc(8px + env(safe-area-inset-b
 .ap.mini .ap-mb:active { background: rgba(255, 255, 255, .12); }
 .ap.mini .ap-bar { display: block; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: rgba(255, 255, 255, .12); }
 .ap.mini .ap-bar i { display: block; width: 0; height: 100%; background: var(--red); }
+/* animasi penuh → melayang: kotak berpindah lewat left/top/width/height, jadi inset & margin bawaan dilepas sementara */
+.ap.morph .ap-sheet { inset: auto; right: auto; bottom: auto; margin: 0; max-width: none; z-index: 41; }
+.ap-veil { position: fixed; z-index: 38; background: var(--bg); overflow: hidden; pointer-events: none; padding-top: var(--sat); }
+.ap-veil .ap-copy { overflow: hidden; padding: 0 18px; }
 body.ap-mini .pad-nav { height: calc(110px + 82px + env(safe-area-inset-bottom)); }
 body.ap-full { overflow: hidden; }
 /* layar penuh (miring) */
@@ -288,8 +292,8 @@ body[data-mode="anime"] #nav a { font-size: 10.5px; }
 @media (prefers-reduced-motion: reduce) { .tc-it { transition: none; } .tc-crown { animation: none; } }
 
 /* ---------- Favorit anime ---------- */
-.fv-chips { padding-top: 2px; }
-.fv-chips button { display: inline-flex; align-items: center; gap: 7px; }
+.fv-chips { padding-top: 4px; gap: 12px; }
+.fv-chips button { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px 0 16px; min-height: 36px; }
 .fv-chips button b { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: grid; place-items: center; font-size: 11px; background: rgba(255, 255, 255, .1); }
 /* pil putih yang bergeser (.chips.has-th) dari app.css dipakai juga di sini */
 .fv-chips button[aria-pressed="true"] b { background: rgba(11, 16, 24, .14); }
@@ -324,7 +328,8 @@ body[data-mode="anime"] #nav a { font-size: 10.5px; }
 .search.sm.grow { flex: 1; margin: 0; }
 .mn-rows, .fa-rows { display: flex; flex-direction: column; }
 .mn-row { display: flex; align-items: center; gap: 12px; padding: 8px 2px; position: relative; animation: anIn .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i, 0), 12) * 25ms); }
-.mn-row + .mn-row::before { content: ""; position: absolute; left: 64px; right: 2px; top: 0; height: 1px; background: var(--line); opacity: .7; }
+/* pembatas antarbaris sama untuk Koleksi & Riwayat: garis tipis mulai dari teks, tidak di atas baris pertama / bawah baris terakhir */
+.mn-row + .mn-row::before, .fa-row + .fa-row::before { content: ""; position: absolute; left: 64px; right: 2px; top: 0; height: 1px; background: var(--line); opacity: .7; }
 .mn-row .cover.sm, .fa-row .cover.sm { width: 50px; height: 68px; border-radius: 9px; }
 .mn-mid, .fa-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .mn-t, .fa-t { font-size: 14px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -333,7 +338,7 @@ body[data-mode="anime"] #nav a { font-size: 10.5px; }
 .fa-sep { opacity: .6; }
 .fa-rd { color: var(--tx); font-weight: 700; }
 .st-on { color: #FF8A8E; font-weight: 700; } .st-done { color: #5DD39E; font-weight: 700; } .st-soon { color: var(--gold); font-weight: 700; }
-.fa-row { display: flex; align-items: center; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--line); animation: anIn .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i, 0), 12) * 25ms); }
+.fa-row { display: flex; align-items: center; gap: 12px; padding: 9px 2px; position: relative; animation: anIn .4s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(min(var(--i, 0), 12) * 25ms); }
 .fa-bar { display: block; height: 3px; margin-top: 3px; border-radius: 2px; background: rgba(255, 255, 255, .1); overflow: hidden; }
 .fa-bar i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--red), #FF8A8E); }
 .hl-go { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: 999px; background: var(--red); color: #fff; font-size: 12px; font-weight: 800; }
@@ -471,3 +476,9 @@ body.short.ap-mini .jd-today { bottom: calc(8px + 52px + 8px + 70px + 12px + env
 .jd-today svg { transform: rotate(-90deg); transition: transform .25s; }
 .jd-today.up svg { transform: rotate(90deg); }
 .jd-today:active { scale: .96; }
+
+/* ===== halaman daftar yang dipasang lagi saat kembali dari info anime ===== */
+#keep { display: none; }
+/* animasi masuk (kartu muncul satu per satu, dsb.) dianggap sudah selesai: tidak diputar ulang.
+   Jeda negatif → animasi sekali jalan langsung di posisi akhir; animasi berulang (titik SEKARANG, putaran muat) tetap jalan. */
+#view.restored *, #view.restored *::before, #view.restored *::after { animation-delay: -60s !important; }
