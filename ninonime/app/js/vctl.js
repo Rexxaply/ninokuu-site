@@ -11,7 +11,7 @@
 import * as api from "./api.js";
 import { esc, icon, $ } from "./ui.js";
 
-export const PREF_DEF = { speed: 1, autoEnd: true, autoNext: true };
+export const PREF_DEF = { speed: 1, autoEnd: true, autoNext: true, autoPip: true };
 export const prefs = () => ({ ...PREF_DEF, ...(api.lsGet("playerPrefs") || {}) });
 export const setPref = (k, v) => api.lsSet("playerPrefs", { ...prefs(), [k]: v });
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
@@ -25,7 +25,7 @@ const skipI = (dir) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="cu
 
 export const GEAR = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`;
 // pilihan putar otomatis (dipakai menu Pengaturan di bawah video dan panel di layar penuh)
-export const AUTO_OPTS = [["autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai"], ["autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai"]];
+export const AUTO_OPTS = [["autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai"], ["autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai"], ["autoPip", "Melayang di luar aplikasi", "Video tetap tampil saat keluar dari NinoNime"]];
 export const swRow = (k, t, sub, on) => `<button class="sw-row" data-sw="${k}" role="switch" aria-checked="${on}"><span class="sw-l"><b>${t}</b><span>${sub}</span></span><i class="sw-tg" aria-hidden="true"></i></button>`;
 
 export function mountControls(box, vid, o) {
@@ -39,7 +39,8 @@ export function mountControls(box, vid, o) {
     <button class="vc-i vc-hd fs-only" data-v="res" aria-label="Pilih resolusi"><i>HD</i></button>
     <button class="vc-i fs-only" data-v="eps" aria-label="Pilih episode">${icon("list", 20, 2.2)}</button>
     <button class="vc-i fs-only" data-v="set" aria-label="Pengaturan putar">${GEAR}</button>
-    <button class="vc-i nofs" data-v="min" aria-label="Kecilkan ke jendela melayang"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11.5" width="6.5" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>
+    <button class="vc-i nofs" data-v="min" aria-label="Kecilkan ke jendela melayang">${icon("minim", 22, 2.2)}</button>
+    ${document.pictureInPictureEnabled ? `<button class="vc-i" data-v="pip" aria-label="Melayang di luar aplikasi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="12" y="11.5" width="6.5" height="5" rx="1" fill="currentColor" stroke="none"/></svg></button>` : ""}
     <button class="vc-i" data-v="fs" aria-label="Layar penuh">${icon("fs", 19, 2.2)}</button>
   </div>
   <div class="vc-mid">
@@ -156,6 +157,7 @@ export function mountControls(box, vid, o) {
     else if (v === "next") { stopCd(); o.onNext(); }
     else if (v === "min") o.onMin?.();
     else if (v === "fs") o.onFs?.();
+    else if (v === "pip") o.onPip?.();
     else if (v === "skipIntro" && intro) { introDone = true; vid.currentTime = intro[1]; skipIn.hidden = true; }
     else if (v === "skipEnd") { endDone = true; vid.currentTime = vid.duration; vid.dispatchEvent(new Event("nn-end")); }
     else if (v === "nextNow") { stopCd(); o.onNext(); }

@@ -71,7 +71,7 @@ export const player = (() => {
         hasPrev: () => ep > 1, onPrev: () => { if (vid === myVid && ep > 1) go(ep - 1); },
         hasNext: () => !!(ep && (!cur.eps || ep < cur.eps)),
         onNext: () => { if (vid === myVid && ep === epNow) go(ep + 1); },
-        onMin: () => minimize(), onFs: () => (fs ? exitFs() : enterFs()),
+        onMin: () => minimize(), onFs: () => (fs ? exitFs() : enterFs()), onPip: () => togglePip(),
         res: () => ({ cur: srvI, items: resItems() }), onRes: (k) => setServer(Number(k)),
         eps: () => ({ cur: ep, n: epTotal() }), onEp: (n) => { if (n !== ep) go(n); },
         // server gagal dimuat → coba server berikutnya otomatis
@@ -80,7 +80,7 @@ export const player = (() => {
           const k = opts.findIndex((o, i) => i > srvI && o.s !== cur0.s && o.q === cur0.q), n = k >= 0 ? k : opts.findIndex((o, i) => i > srvI && o.s !== cur0.s);
           if (n >= 0) { toast(`${cur0.s} gagal dimuat, pindah ke ${opts[n].s}`); setServer(n); } else toast("Video gagal dimuat di semua server."); },
       });
-      drawSettings();
+      drawSettings(); mediaSession(vid);
       const h = hist().find((y) => y.id === cur.id && Number(y.ep) === ep);
       const v = vid, a0 = cur, e0 = ep;   // pendengar memakai video ini sendiri (vid bisa sudah berganti episode)
       v.addEventListener("loadedmetadata", () => { if (h?.t > 5 && h.t < v.duration - 10) v.currentTime = h.t; }, { once: true });
@@ -165,7 +165,44 @@ export const player = (() => {
     const k = t.dataset.ps;
     setPref(k, t.checked);
   }
-  function stopMedia() { ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
+  /* ---- melayang di luar aplikasi (Picture-in-Picture sistem) + Media Session ----
+     - tombol PiP di baris atas: jendela video sistem yang tetap tampil di layar utama & aplikasi lain
+     - otomatis saat aplikasi disembunyikan (tombol Home / pindah aplikasi) ketika video sedang diputar
+       (sakelar "Melayang di luar aplikasi"); Chrome yang mendukung memanggil handler "enterpictureinpicture"
+     - Media Session: judul & sampul di notifikasi, putar/jeda, ±10 dtk, episode sebelumnya/berikutnya
+       (tombol yang sama muncul di jendela PiP) */
+  const inPip = () => !!document.pictureInPictureElement;
+  async function togglePip() {
+    try { if (inPip()) await document.exitPictureInPicture(); else if (vid) await vid.requestPictureInPicture(); }
+    catch { toast("Jendela melayang tidak didukung di perangkat ini."); }
+  }
+  const ms = "mediaSession" in navigator ? navigator.mediaSession : null;
+  const setMs = (k, f) => { try { ms.setActionHandler(k, f); } catch {} };
+  function mediaSession(v) {
+    if (!ms || !v) return;
+    const art = cur?.cover ? new URL(cur.cover, location.href).href : "";
+    try { ms.metadata = new MediaMetadata({ title: ep ? `Episode ${ep}` : "Trailer", artist: cur?.title || "", album: "NinoNime", artwork: art ? [{ src: art, sizes: "512x512" }] : [] }); } catch {}
+    setMs("play", () => v.play().catch(() => {}));
+    setMs("pause", () => v.pause());
+    setMs("seekbackward", (d) => { v.currentTime = Math.max(0, v.currentTime - (d?.seekOffset || 10)); });
+    setMs("seekforward", (d) => { v.currentTime = Math.min(v.duration || 0, v.currentTime + (d?.seekOffset || 10)); });
+    setMs("seekto", (d) => { if (d?.seekTime != null) v.currentTime = d.seekTime; });
+    setMs("previoustrack", ep > 1 ? () => go(ep - 1) : null);
+    setMs("nexttrack", ep && (!cur.eps || ep < cur.eps) ? () => go(ep + 1) : null);
+    setMs("enterpictureinpicture", () => { if (prefs().autoPip && vid === v && !inPip()) v.requestPictureInPicture().catch(() => {}); });
+    const pos = () => { try { if (v.duration && isFinite(v.duration)) ms.setPositionState({ duration: v.duration, position: Math.min(v.currentTime, v.duration), playbackRate: v.playbackRate || 1 }); } catch {} };
+    v.addEventListener("loadedmetadata", pos); v.addEventListener("seeked", pos); v.addEventListener("ratechange", pos);
+    v.addEventListener("play", () => { ms.playbackState = "playing"; pos(); }); v.addEventListener("pause", () => { ms.playbackState = "paused"; });
+    // di dalam aplikasi: pemutar menandai video sedang diputar di jendela melayang sistem
+    v.addEventListener("enterpictureinpicture", () => root?.classList.add("pip"));
+    v.addEventListener("leavepictureinpicture", () => root?.classList.remove("pip"));
+  }
+  function clearMs() { if (!ms) return; try { ms.metadata = null; ms.playbackState = "none"; } catch {} ["play", "pause", "seekbackward", "seekforward", "seekto", "previoustrack", "nexttrack", "enterpictureinpicture"].forEach((k) => setMs(k, null)); }
+  // aplikasi disembunyikan saat video diputar → masuk jendela melayang sistem (bila didukung tanpa ketukan)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && vid && !vid.paused && !inPip() && prefs().autoPip && document.pictureInPictureEnabled) vid.requestPictureInPicture().catch(() => {});
+  });
+  function stopMedia() { if (inPip()) document.exitPictureInPicture().catch(() => {}); root?.classList.remove("pip"); clearMs(); ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
   const ytCmd = (func) => { try { yt?.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*"); } catch {} };
   function onYtMsg(e) {
     if (!yt || e.source !== yt.contentWindow) return;
