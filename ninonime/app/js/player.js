@@ -172,6 +172,7 @@ export const player = (() => {
      - Media Session: judul & sampul di notifikasi, putar/jeda, ±10 dtk, episode sebelumnya/berikutnya
        (tombol yang sama muncul di jendela PiP) */
   const inPip = () => !!document.pictureInPictureElement;
+  let pipShown = false;   // jendela PiP benar-benar tampil (ukurannya dilaporkan)
   async function togglePip() {
     try { if (inPip()) await document.exitPictureInPicture(); else if (vid) await vid.requestPictureInPicture(); }
     catch { toast("Jendela melayang tidak didukung di perangkat ini."); }
@@ -189,18 +190,21 @@ export const player = (() => {
     setMs("seekto", (d) => { if (d?.seekTime != null) v.currentTime = d.seekTime; });
     setMs("previoustrack", ep > 1 ? () => go(ep - 1) : null);
     setMs("nexttrack", ep && (!cur.eps || ep < cur.eps) ? () => go(ep + 1) : null);
-    setMs("enterpictureinpicture", () => { if (prefs().autoPip && vid === v && !inPip()) v.requestPictureInPicture().catch(() => {}); });
+    setMs("enterpictureinpicture", prefs().autoPip ? () => { if (vid === v && !inPip()) v.requestPictureInPicture().catch(() => {}); } : null);
     const pos = () => { try { if (v.duration && isFinite(v.duration)) ms.setPositionState({ duration: v.duration, position: Math.min(v.currentTime, v.duration), playbackRate: v.playbackRate || 1 }); } catch {} };
     v.addEventListener("loadedmetadata", pos); v.addEventListener("seeked", pos); v.addEventListener("ratechange", pos);
     v.addEventListener("play", () => { ms.playbackState = "playing"; pos(); }); v.addEventListener("pause", () => { ms.playbackState = "paused"; });
     // di dalam aplikasi: pemutar menandai video sedang diputar di jendela melayang sistem
-    v.addEventListener("enterpictureinpicture", () => root?.classList.add("pip"));
-    v.addEventListener("leavepictureinpicture", () => root?.classList.remove("pip"));
+    v.addEventListener("enterpictureinpicture", (e) => { root?.classList.add("pip"); const w = e.pictureInPictureWindow; pipShown = !!(w && w.width > 0); w?.addEventListener?.("resize", () => { pipShown = w.width > 0; }); });
+    v.addEventListener("leavepictureinpicture", () => { root?.classList.remove("pip"); pipShown = false; });
   }
   function clearMs() { if (!ms) return; try { ms.metadata = null; ms.playbackState = "none"; } catch {} ["play", "pause", "seekbackward", "seekforward", "seekto", "previoustrack", "nexttrack", "enterpictureinpicture"].forEach((k) => setMs(k, null)); }
-  // aplikasi disembunyikan saat video diputar → masuk jendela melayang sistem (bila didukung tanpa ketukan)
+  /* Catatan Android: PiP hanya bisa dimulai dari ketukan (tombol PiP), atau otomatis oleh Chrome saat video sedang
+     LAYAR PENUH lalu tombol Home ditekan. Meminta PiP setelah aplikasi tersembunyi tidak menampilkan jendela apa pun
+     (dulu pemutar jadi "Diputar di jendela melayang" tanpa jendela + layar putih saat kembali) — jadi tidak dilakukan. */
+  // kembali ke aplikasi: bila jendela melayang sistem ternyata tidak tampil, pulihkan pemutar di dalam aplikasi
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden" && vid && !vid.paused && !inPip() && prefs().autoPip && document.pictureInPictureEnabled) vid.requestPictureInPicture().catch(() => {});
+    if (document.visibilityState === "visible" && inPip() && root?.classList.contains("pip") && !pipShown) document.exitPictureInPicture().catch(() => {});
   });
   function stopMedia() { if (inPip()) document.exitPictureInPicture().catch(() => {}); root?.classList.remove("pip"); clearMs(); ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
   const ytCmd = (func) => { try { yt?.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*"); } catch {} };
@@ -338,6 +342,7 @@ export const player = (() => {
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fs) exitFs(); });
 
   function onClick(e) {
+    if (root.classList.contains("pip") && e.target.closest(".ap-media")) { document.exitPictureInPicture().catch(() => {}); return; }
     const b = e.target.closest("[data-p]");
     if (st === "mini" && Date.now() - dragged < 400) return;
     if (st === "mini" && !b) { flip("full"); return; }

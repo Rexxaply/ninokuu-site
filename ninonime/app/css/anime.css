@@ -819,5 +819,8 @@ html:has(body.ap-full) { overflow: hidden; }
 .ap.dragging .vc, .ap.dragging .ap-ctl { opacity: 0; transition: opacity .12s; pointer-events: none; }
 
 /* video sedang diputar di jendela melayang sistem (PiP) */
-.ap.pip .ap-media::after { content: "Diputar di jendela melayang"; position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: #05080E; color: var(--mu); font-size: 13px; font-weight: 600; }
+.ap.pip .ap-media::after { content: "Diputar di jendela melayang · ketuk untuk kembali"; position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: #05080E; color: var(--mu); font-size: 13px; font-weight: 600; }
 .ap.pip .vc { display: none; }
+
+/* layar penuh: video mengisi layar (syarat Chrome Android untuk PiP otomatis saat tombol Home) */
+.ap.fs .ap-media video, .ap-vid:fullscreen video { width: 100%; height: 100%; object-fit: contain; }
