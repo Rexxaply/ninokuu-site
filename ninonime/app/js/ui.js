@@ -100,3 +100,31 @@ document.addEventListener("click", (e) => {
   const k = segKey(el); if (k) segLast.set(k, { ...el._th, sl: el.scrollLeft, t: Date.now() });
 }, true);
 
+
+/* ---------- Lembar pilihan (pengganti <select> bawaan Android/Chrome) ----------
+   choose({ title, value, groups: [{ label, items: [{ v, label, sub, tag }] }] }) → Promise<nilai | null>
+   Muncul dari bawah layar, dikelompokkan per judul, pilihan aktif bertanda bulat merah. Tutup: ketuk latar / tombol ✕ / Escape. */
+let chooseOpen = null;
+export const closeChoose = () => { if (!chooseOpen) return false; chooseOpen(null); return true; };
+export function choose({ title = "", value = null, groups = [] } = {}) {
+  closeChoose();
+  return new Promise((resolve) => {
+    const host = document.createElement("div"); host.className = "cs-host";
+    host.innerHTML = `<div class="cs-bg" data-cs="x"></div><div class="cs" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+      <span class="cs-grab" aria-hidden="true"></span>
+      <div class="cs-h"><b>${esc(title)}</b><button class="cs-x" data-cs="x" aria-label="Tutup">${icon("x", 20, 2.2)}</button></div>
+      <div class="cs-list">${groups.map((g) => `${g.label ? `<div class="cs-g">${esc(g.label)}</div>` : ""}<div class="cs-card">${g.items.map((it) => { const on = String(it.v) === String(value);
+        return `<button class="cs-it${on ? " on" : ""}" data-cs="v" data-v="${esc(it.v)}" role="radio" aria-checked="${on}"><span class="cs-l"><b>${esc(it.label)}</b>${it.sub ? `<span>${esc(it.sub)}</span>` : ""}</span>${it.tag ? `<i class="cs-tag">${esc(it.tag)}</i>` : ""}<span class="cs-r" aria-hidden="true"></span></button>`; }).join("")}</div>`).join("")}</div></div>`;
+    document.body.append(host);
+    requestAnimationFrame(() => { host.classList.add("on"); host.querySelector(".cs-it.on")?.scrollIntoView({ block: "nearest" }); });
+    const finish = (v) => { chooseOpen = null; host.classList.remove("on"); host.classList.add("off"); setTimeout(() => host.remove(), 260); resolve(v); };
+    host.addEventListener("click", (e) => { const b = e.target.closest("[data-cs]"); if (!b) return; if (b.dataset.cs === "x") finish(null); else { host.querySelectorAll(".cs-it").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", String(x === b)); }); setTimeout(() => finish(b.dataset.v), 140); } });
+    // geser lembar ke bawah untuk menutup
+    const sh = host.querySelector(".cs"); let y0 = null, dy = 0;
+    sh.addEventListener("touchstart", (e) => { if (host.querySelector(".cs-list").scrollTop > 0 && !e.target.closest(".cs-h, .cs-grab")) return; y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+    sh.addEventListener("touchmove", (e) => { if (y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); sh.style.transition = "none"; sh.style.transform = `translateY(${dy}px)`; }, { passive: true });
+    sh.addEventListener("touchend", () => { if (y0 == null) return; y0 = null; sh.style.transition = ""; sh.style.transform = ""; if (dy > 90) finish(null); });
+    chooseOpen = finish;
+  });
+}
+addEventListener("keydown", (e) => { if (e.key === "Escape" && closeChoose()) e.stopImmediatePropagation(); }, true);

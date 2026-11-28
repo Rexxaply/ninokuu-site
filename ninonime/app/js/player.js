@@ -1,5 +1,5 @@
 // NinoNime · modul anime/player (dipecah dari anime.js)
-import { esc, icon, $, $$, toast } from "./ui.js";
+import { choose, esc, icon, $, $$, toast } from "./ui.js";
 import { episodeSource } from "./sources.js";
 import { mountControls, prefs, setPref, SPEEDS } from "./vctl.js";
 import * as api from "./api.js";
@@ -99,23 +99,33 @@ export const player = (() => {
   function drawSettings() {
     const box = root && $(".ap-set", root); if (!box) return;
     if (!vid || !src0) { box.innerHTML = ""; return; }
-    const p = prefs(), groups = [...new Set(opts.map((o) => o.s))];
+    const p = prefs();
     const sw = (k, t, sub) => `<label class="ps-row ps-sw"><span class="ps-l"><b>${t}</b><span>${sub}</span></span><input type="checkbox" role="switch" data-ps="${k}" ${p[k] ? "checked" : ""}><i class="ps-tg" aria-hidden="true"></i></label>`;
     box.innerHTML = `<div class="ps">
-      <label class="ps-row"><span class="ps-l"><b>Server</b><span>Server &amp; resolusi video</span></span><span class="ps-sel"><select data-ps="server" aria-label="Server dan resolusi">${groups.map((g) => { const its = opts.map((o, i) => [o, i]).filter(([o]) => o.s === g);
-        const op = its.map(([o, i]) => `<option value="${i}" ${i === srvI ? "selected" : ""}>${esc(o.q ? `${o.q} ${g}` : g)}</option>`).join("");
-        return groups.length > 1 || its.length > 1 ? `<optgroup label="${esc(g)}">${op}</optgroup>` : op; }).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
-      <label class="ps-row"><span class="ps-l"><b>Kecepatan</b><span>Kecepatan putar video</span></span><span class="ps-sel"><select data-ps="speed" aria-label="Kecepatan">${SPEEDS.map((v) => `<option value="${v}" ${v === p.speed ? "selected" : ""}>${v === 1 ? "Normal" : v + "×"}</option>`).join("")}</select>${icon("chev", 14, 2.4)}</span></label>
+      <div class="ps-row"><span class="ps-l"><b>Server</b><span>Server &amp; resolusi video</span></span><button class="ps-pick" data-pk="server" aria-haspopup="dialog">${esc(optName(opts[srvI]))}${icon("chev", 14, 2.4)}</button></div>
+      <div class="ps-row"><span class="ps-l"><b>Kecepatan</b><span>Kecepatan putar video</span></span><button class="ps-pick" data-pk="speed" aria-haspopup="dialog">${speedName(p.speed)}${icon("chev", 14, 2.4)}</button></div>
       ${sw("autoEnd", "Lewati ending otomatis", "Langsung ke akhir saat lagu penutup mulai")}
       ${sw("autoNext", "Episode berikutnya otomatis", "Hitung mundur 5 detik setelah selesai")}
       ${src0.demo ? `<p class="ps-note">Video demo: “Big Buck Bunny” © Blender Foundation (CC BY 3.0). Di demo, semua resolusi satu server memutar file yang sama.</p>` : ""}</div>`;
   }
+  const optName = (o) => (o ? (o.q ? `${o.q} ${o.s}` : o.s) : "");
+  const speedName = (v) => (Number(v) === 1 ? "Normal" : `${v}×`);
+  const RES_TAG = { "2160p": "4K", "1440p": "2K", "1080p": "FHD", "720p": "HD", "480p": "SD", "360p": "SD" };
+  // tombol Server / Kecepatan → lembar pilihan NinoNime (bukan dropdown bawaan)
+  async function pickSetting(k) {
+    if (k === "server") {
+      const groups = [...new Set(opts.map((o) => o.s))].map((g) => ({ label: g, items: opts.map((o, i) => [o, i]).filter(([o]) => o.s === g).map(([o, i]) => ({ v: i, label: o.q || g, sub: o.q ? g : "", tag: RES_TAG[o.q] || "" })) }));
+      const v = await choose({ title: "Server & resolusi", value: srvI, groups });
+      if (v != null && Number(v) !== srvI) setServer(Number(v));
+    } else if (k === "speed") {
+      const v = await choose({ title: "Kecepatan putar", value: prefs().speed, groups: [{ items: SPEEDS.map((x) => ({ v: x, label: speedName(x), sub: x === 1 ? "Kecepatan asli" : "" })) }] });
+      if (v != null) { setPref("speed", Number(v)); if (vid) vid.playbackRate = Number(v); drawSettings(); }
+    }
+  }
   function onSetting(e) {
     const t = e.target.closest?.("[data-ps]"); if (!t) return;
     const k = t.dataset.ps;
-    if (k === "server") setServer(Number(t.value));
-    else if (k === "speed") { setPref("speed", Number(t.value)); if (vid) vid.playbackRate = Number(t.value); }
-    else setPref(k, t.checked);
+    setPref(k, t.checked);
   }
   function stopMedia() { ctl?.destroy(); ctl = null; src0 = null; if (vid) { try { vid.pause(); } catch {} vid.removeAttribute("src"); vid.load?.(); } vid = null; yt = null; ytState = -1; const m = root && media(); if (m) m.innerHTML = ""; }
   const ytCmd = (func) => { try { yt?.contentWindow.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*"); } catch {} };
@@ -235,6 +245,7 @@ export const player = (() => {
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && fs) exitFs(); });
 
   function onClick(e) {
+    const pk = e.target.closest("[data-pk]"); if (pk && st === "full") { pickSetting(pk.dataset.pk); return; }
     const b = e.target.closest("[data-p]");
     if (st === "mini" && !b) { flip("full"); return; }
     if (!b) return;
